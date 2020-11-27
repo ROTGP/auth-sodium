@@ -27,7 +27,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "ROTGP\\AuthSodiumMiddleware\\AuthSodiumMiddlewareServiceProvider"
+                "ROTGP\\AuthSodium\\AuthSodiumServiceProvider"
             ]
         }
     }
