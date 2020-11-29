@@ -2,9 +2,9 @@
 
 namespace ROTGP\AuthSodium;
 
-use Closure;
 use ROTGP\AuthSodium\User;
 
+use Closure;
 use Auth;
 
 class AuthSodiumMiddleware

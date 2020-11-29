@@ -2,10 +2,11 @@
 
 namespace ROTGP\AuthSodium;
 
+use ROTGP\AuthSodium\AuthSodiumMiddleware;
+
+use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Router;
-use ROTGP\AuthSodium\AuthSodiumMiddleware;
-use Illuminate\Support\ServiceProvider;
 
 use Artisan;
 use Auth;
