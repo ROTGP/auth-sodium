@@ -3,14 +3,16 @@
 namespace ROTGP\AuthSodium\Test;
 
 use ROTGP\AuthSodium\Test\Models\User;
+use Faker\Factory as Faker;
+
 
 use Illuminate\Support\Facades\Auth;
-// use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Route;
 
 class IntegrationTestCase extends TestCase
 {
-    // use RefreshDatabase;
+    protected $faker;
+    protected $users;
 
     /**
      * Setup the test environment.
@@ -20,6 +22,16 @@ class IntegrationTestCase extends TestCase
         parent::setUp();
         $this->loadMigrationsFrom(__DIR__ . '/migrations');
         $this->artisan('migrate:refresh', ['--database' => 'testbench']);
+
+        $this->app['config']->set('authsodium.model', User::class);
+        
+        $this->faker = Faker::create();
+        $this->faker->seed(10);
+
+        $this->generateUsers();
+
+        // $this->app->config['authsodium.model'] = 'foo';
+        // dd($this->app->config['authsodium']['model']);
         // $this->refreshInMemoryDatabase(); 
     }
 
@@ -46,14 +58,31 @@ class IntegrationTestCase extends TestCase
         $this->app->get(Route::class)->controller = null;
     }
 
-    protected function assertForbidden($response)
+    /**
+     * For each test - generate an array of user
+     * objects, each containing:
+     *  - email
+     *  - password
+     *  - the user model object
+     *
+     * @return array
+     */
+    protected function generateUsers()
     {
-        $response->assertStatus(403);
-        $json = $this->decodeResponse($response);
-        $this->assertArrayHasKey('http_status_code', $json);
-        $this->assertEquals(403, $json['http_status_code']);
-        $this->assertArrayHasKey('http_status_message', $json);
-        $this->assertEquals('Forbidden', $json['http_status_message']);
+        $this->users = [];
+        for ($i = 0; $i < 10; $i++) {
+            $user = [];
+            $user['email'] = $this->faker->email;
+            $user['password'] = $this->faker->password;
+            $keyPair = sodium_crypto_sign_seed_keypair(sodium_crypto_generichash($user['email'] . $user['password']));
+            $secretKey = base64_encode(sodium_crypto_sign_secretkey($keyPair));
+            $publicKey = base64_encode(sodium_crypto_sign_publickey($keyPair));
+
+            $model = new User(['email' => $user['email'], 'public_key' => $publicKey]);
+            $model->save();
+            $user['model'] = $model;
+            $this->users[] = $user;
+        }
     }
 
     /**

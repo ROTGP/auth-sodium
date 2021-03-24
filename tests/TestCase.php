@@ -37,10 +37,5 @@ class TestCase extends OrchestraTestCase
         // https://github.com/orchestral/testbench/issues/252
         $router = $app['router'];
         $router->resource('users', UserController::class);
-        $router->resource('albums', AlbumController::class);
-        $router->resource('artists', ArtistController::class);
-        $router->resource('plays', PlayController::class);
-        $router->resource('songs', SongController::class);
-        $router->resource('streaming_services', StreamingServiceController::class);
     }
 }

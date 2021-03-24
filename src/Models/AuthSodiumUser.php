@@ -1,14 +1,46 @@
 <?php
 
-namespace ROTGP\AuthSodium;
+namespace ROTGP\AuthSodium\Models;
 
-// use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Auth\Authenticatable;
+
 use Exception;
 
-abstract class User extends Model implements Authenticatable
-{
+abstract class AuthSodiumUser extends Model implements Authenticatable
+{    
+    final protected static function booted()
+    {
+        static::creating(function ($user)
+        {
+            authSodium()->userWillBeCreated($user);
+        });
+
+        static::created(function ($user)
+        {
+            authSodium()->userWasCreated($user);
+        });
+
+        static::updating(function ($user)
+        {
+            authSodium()->userWillBeUpdated($user);
+        });
+
+        static::didBoot();
+    }
+
+    /**
+     * Extending classes may overide this boot method
+     * as the default booted is marked as final.
+     *
+     * @return void
+     */
+    protected static function didBoot()
+    {
+        //
+    }
+    
+
     /**
      * The attributes that are mass assignable.
      *
@@ -17,17 +49,27 @@ abstract class User extends Model implements Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'public_key',
+        'public_key'
     ];
 
     /**
-     * The attributes that should be hidden for arrays.
+     * Set the user's email.
      *
-     * @var array
+     * @param  string  $value
+     * @return void
      */
-    protected $hidden = [
-        'public_key'
-    ];
+    public function setEmailAttribute($value)
+    {
+        if (is_string($value)) {
+            $value = strtolower($value);
+        }
+        $this->attributes['email'] = $value;
+    }
+
+    public function emailVerification()
+    {
+        return $this->hasOne('ROTGP\AuthSodium\Models\EmailVerification');
+    }
 
 
     // implement Illuminate\Contracts\Auth\Authenticatable methods
@@ -69,7 +111,7 @@ abstract class User extends Model implements Authenticatable
      */
     public function getRememberToken()
     {
-        throw new Exception('not yet implemented');
+        throw new Exception('not implemented');
     }
 
     /**
@@ -80,7 +122,7 @@ abstract class User extends Model implements Authenticatable
      */
     public function setRememberToken($value)
     {
-        throw new Exception('not yet implemented');
+        throw new Exception('not implemented');
     }
 
     /**
@@ -90,6 +132,6 @@ abstract class User extends Model implements Authenticatable
      */
     public function getRememberTokenName()
     {
-        throw new Exception('not yet implemented');
+        throw new Exception('not implemented');
     }
 }

@@ -9,6 +9,9 @@
         },
         "classmap": [
             "src"
+        ],
+        "files": [
+            "src/helpers.php"
         ]
     },
     "autoload-dev": {
@@ -16,8 +19,7 @@
             "ROTGP\\AuthSodium\\Test\\": "tests/"
         },
         "classmap": [
-            "tests/models",
-            "tests/controllers"
+            "tests/models"
         ]
     },
     "require-dev": {
