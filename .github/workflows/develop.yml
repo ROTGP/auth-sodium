@@ -1,0 +1,52 @@
+# https://rubenvanassche.com/testing-php-packages-with-github-actions/
+name: Tests (develop)
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        php: [8.0, 7.4, 7.3]
+        testbench: [6.0, 5.0]
+        include:
+          - testbench: 6.0
+            laravel: 8.0
+          - testbench: 5.0
+            laravel: 7.0
+
+    name: PHP v${{ matrix.php }} - Laravel v${{ matrix.laravel }} (Testbench v${{ matrix.testbench }}) on ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: intl, fileinfo, pdo_sqlite
+          ini-values: "post_max_size=256M"
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v1
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - name: Run composer install
+        run: |
+             composer install -n --prefer-dist
+             composer require "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --with-all-dependencies
+        env:
+          APP_ENV: testing
+        
+      - name: Run tests
+        run: ./vendor/bin/phpunit
+        env:
+          APP_ENV: testing
