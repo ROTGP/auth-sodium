@@ -4,7 +4,7 @@ name: Tests (develop)
 on:
   push:
     branches:
-      - develop
+      - foo
 
 jobs:
   tests:

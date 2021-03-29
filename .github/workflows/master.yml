@@ -3,7 +3,7 @@ name: Tests (master)
 on:
   push:
     branches:
-      - master
+      - foo
 
 jobs:
   tests:
