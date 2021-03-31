@@ -10,8 +10,8 @@ class FooController extends BaseController
 {
     public function index()
     {
-        dd(2222);
-        dd('mk', $id, optional(Auth::guard('authsodium')->user())->toArray());
+       
+        // dd('mk', $id, optional(Auth::guard('authsodium')->user())->toArray());
         return $this->respond(Foo::all());
     }
 
@@ -27,7 +27,6 @@ class FooController extends BaseController
 
     public function update($id)
     {
-        // dd('mk', $id, optional(Auth::guard('authsodium')->user())->toArray());
         $foo = Foo::find($id);
         $foo->fill(request()->all())->save();
         return $this->respond($foo);

@@ -25,7 +25,8 @@ class Nonce extends Model
 
     public function authUser()
     {
-        return $this->belongsTo(config('authsodium.model'), $this->foreignKeyName());
+        // @TODO authSodium()->authUserModel()
+        return $this->belongsTo(config('authsodium.user.model'), $this->foreignKeyName());
     }
 
     public function foreignKeyName()

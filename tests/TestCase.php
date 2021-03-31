@@ -10,6 +10,10 @@ use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 class TestCase extends OrchestraTestCase
 {
+    protected function customizeSetup()
+    {
+        //
+    }
     /**
      * Define environment setup.
      *
@@ -18,7 +22,8 @@ class TestCase extends OrchestraTestCase
      */
     protected function getEnvironmentSetUp($app)
     {
-        $app['config']->set('authsodium.model', User::class);
+        $app['config']->set('authsodium.user.model', User::class);
+        $app['config']->set('app.key', 'base64:A8UAQXCblckPdjeR9+f6xr+oZeu/U0wHgHhz6T1ayvw=');
         $app['config']->set('database.default', 'testbench');
         $app['config']->set('database.connections.testbench', [
             'driver' => 'sqlite',
@@ -31,9 +36,6 @@ class TestCase extends OrchestraTestCase
             'schema' => 'public',
             'sslmode' => 'prefer'
         ]);
-        
-        $router = $app['router'];
-        $router->resource('foos', FooController::class);
-        $router->resource('bars', BarController::class);
+        $this->customizeSetup();
     }
 }

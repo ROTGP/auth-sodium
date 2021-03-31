@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Routing\Route;
+use Illuminate\Contracts\Http\Kernel;
 
 use Faker\Factory as Faker;
 
@@ -21,6 +22,17 @@ class IntegrationTestCase extends TestCase
     private static $fake;
     protected $users = [];
 
+    private $method = null;
+    private $url = null;
+    private $nonce = null;
+    private $timestamp = null;
+    private $user = null;
+    private $glue = '';
+    private $signatureString = null;
+    private $signature = null;
+    private $headers = null;
+    private $resource = null;
+
     /**
      * Setup the test environment.
      */
@@ -29,6 +41,22 @@ class IntegrationTestCase extends TestCase
         parent::setUp();
         $this->loadMigrationsFrom(__DIR__ . '/migrations');
         $this->buildUsers();
+        $this->cleanupRequestData();
+    }
+
+    protected function cleanupRequestData()
+    {
+        $this->method = 
+            $this->url = 
+            $this->nonce = 
+            $this->timestamp = 
+            $this->user = 
+            $this->signatureString = 
+            $this->signature =
+            $this->headers = 
+            $this->resource =
+            null;
+        $this->glue = '';
     }
 
     /**
@@ -56,59 +84,44 @@ class IntegrationTestCase extends TestCase
         return $this->actingAs(User::find($id));
     }
 
-    protected function request($user, $method, $url, $queryData, $postData, $nonce, $timestamp)
+    protected function router()
     {
-        $url = 'http://localhost/' . $url;
+        return app()['router'];
+    }
 
-        $toSign = [];
-        $toSign['method'] = strtolower($method);
-        $toSign['url'] = strtolower($url);
-        $toSign['nonce'] = $nonce;
-        $toSign['timestamp'] = $timestamp;
+    protected function kernel()
+    {
+        return resolve(Kernel::class);
+    }
 
-        $query = '';
-        if (sizeof($queryData) > 0) {
-            $queryData = array_change_key_case($queryData, CASE_LOWER);
-            ksort($queryData);
-            $queryData = array_map(function($value) {
-                return $value === null ? '' : $value;
-            }, $queryData);
-            $query = json_encode($queryData, JSON_UNESCAPED_UNICODE);
-        } 
-        $toSign['query_data'] = $query;
-
-        $post = '';
-        if (sizeof($postData) > 0) {
-            $postData = array_map(function($value) {
-                return $value === null ? '' : $value;
-            }, $postData);
-            $post = json_encode($postData, JSON_UNESCAPED_UNICODE);
-        } 
-        $toSign['post_data'] = $post;
-
-        $toSign['user'] = $user['email'];
+    protected function request(
+        $method = 'get',
+        $url = 'foos',
+        $queryData = null,
+        $postData = null,
+        $user = null,
+        $nonce = 1,
+        $timestamp = 1
+        )
+    {
+        return $this->method($method)
+            ->url($url)
+            ->queryData($queryData)
+            ->postData($postData)
+            ->user($user)
+            ->nonce($nonce)
+            ->timestamp($timestamp);
         
-        $resource = $url;
-        if (sizeof($queryData) > 0)
-            $resource .= '?' . http_build_query($queryData);
-        
-        $toSign = implode('', array_values($toSign));
-
-        $secretKey = base64_decode($user['secret_key']);
-
-        $signature = base64_encode(
-            sodium_crypto_sign_detached(
-                $toSign, $secretKey
-            )
-        );
+       
 
         $headers = [
             'Nonce' => $nonce,
             'Timestamp' => $timestamp,
             'Signature' => $signature,
-            'User' => $user['email']
+            'User-Identifier' => $user['email']
         ];
 
+        // dd($method, $resource, $headers, $postData);
         return $this->withHeaders($headers)->{$method}($resource, $postData);
     }
 
@@ -127,6 +140,16 @@ class IntegrationTestCase extends TestCase
         $this->assertEquals('Forbidden', $json['http_status_message']);
     }
 
+    protected function assertBadRequest($response)
+    {
+        $response->assertStatus(400);
+        $json = $this->decodeResponse($response);
+        $this->assertArrayHasKey('http_status_code', $json);
+        // $this->assertEquals(400, $json['http_status_code']);
+        // $this->assertArrayHasKey('http_status_message', $json);
+        // $this->assertEquals('Forbidden', $json['http_status_message']);
+    }
+
     protected function assertAssociativeArray($value)
     {
         $this->assertTrue($this->isAssociative($value));
@@ -143,7 +166,7 @@ class IntegrationTestCase extends TestCase
         return array_keys($value) !== range(0, count($value) - 1);
     }
 
-    private function buildUsers()
+    protected function buildUsers()
     {
         self::faker()->seed(10);
 
@@ -159,14 +182,11 @@ class IntegrationTestCase extends TestCase
             $user['email'] = self::faker()->email;
             $user['secret_key'] = base64_encode($secretKey);
             $user['public_key'] = base64_encode($publicKey);
-            
-            $u = User::create([
+            $user['model'] = User::create([
                 'name' => $user['name'],
                 'email' => $user['email'],
                 'public_key' => $user['public_key']
             ]);
-
-            $user['id'] = $u->id;
             $this->users[] = $user;
         }
 
@@ -175,21 +195,192 @@ class IntegrationTestCase extends TestCase
 
         for ($i = 0; $i < 10; $i++)
             Bar::create(['name' => self::faker()->name]);
+    }
 
-        // dd($this->users);
+    public function response($signed = true)
+    {
+        if (!$signed)
+            return $this->{$this->method}($this->getFullUrl(), $this->getPostData());
+            
+        return $this->withHeaders($this->getHeaders())->{$this->method}($this->getFullUrl(), $this->getPostData());
+    }
+    
 
-        // for ($i = 0; $i < 100; $i++) {
-        //     $user = self::faker()->randomElement($this->users);
-        //     $value = sodium_crypto_generichash($i, null, 32);
-        //     $nonce = new Nonce([
-        //         'value' => base64_encode($value),
-        //     ]);
-        //     $nonce->setUserKey($user['id']);
-        //     $nonce->save();
-        // }
+    public function getFullUrl($withQuery = true)
+    {
+        $resource = $this->baseUrl . '/' . $this->url;
+        
+        if ($this->resource !== null)
+            $resource .= '/' . $this->resource;
 
-        // dd('dne!', User::withCount(['nonces'])->get()->toArray());
-        // dd(User::where('id', 2)->with(['nonces'])->get()->toArray());
-        // dd(Nonce::forUserKey(3)->with(['authUser'])->get()->toArray());
+        if ($withQuery && $this->queryData !== null && sizeof($this->queryData) > 0)
+            $resource .= '?' . http_build_query($this->queryData);
+            
+        return $resource;
+    }
+
+    public function getQueryParams()
+    {
+        return $this->queryParams();
+    }
+
+    public function getPostData()
+    {
+        return in_array($this->method, ['put', 'post']) ? $this->postData : [];
+    }
+
+    
+
+    public function getQueryString()
+    {
+        $query = '';
+        if ($this->queryData !== null && sizeof($this->queryData) > 0) {
+            $this->queryData = array_change_key_case($this->queryData, CASE_LOWER);
+            ksort($this->queryData);
+            $this->queryData = array_map(function($value) {
+                return $value === null ? '' : $value;
+            }, $this->queryData);
+            $query = json_encode($this->queryData, JSON_UNESCAPED_UNICODE);
+        }
+        return $query;
+    }
+
+    public function getPostString()
+    {
+        $post = '';
+        if (in_array($this->method, ['put', 'post']) && $this->postData !== null && sizeof($this->postData) > 0) {
+            $this->postData = array_map(function($value) {
+                return $value === null ? '' : $value;
+            }, $this->postData);
+            $post = json_encode($this->postData, JSON_UNESCAPED_UNICODE);
+        } 
+        return $post;
+    }
+
+    public function getSignatureParams()
+    {
+        $params = [];
+        $params['method'] = $this->method;
+        $params['url'] = $this->getFullUrl(false);
+        $params['query'] = $this->getQueryString();
+        $params['post'] = $this->getPostString();
+        $params['user'] = optional($this->user)['email'] ?? '';
+        $params['nonce'] = $this->nonce;
+        $params['timestamp'] = $this->timestamp;
+        return $params;
+    }
+
+    public function getSignatureString()
+    {
+        return $this->signatureString ?? implode($this->glue, array_values($this->getSignatureParams()));
+    }
+
+    public function getSignature()
+    {
+        return $this->signature ?? ($this->user ? base64_encode(
+            sodium_crypto_sign_detached(
+                $this->getSignatureString(), base64_decode($this->user['secret_key'])
+            )
+        ) : '');
+    }
+
+    public function getHeaders()
+    {
+        return $this->headers ?? [
+            'Auth-Nonce' => $this->nonce,
+            'Auth-Timestamp' => $this->timestamp,
+            'Auth-User' => optional($this->user)['email'] ?? '',
+            'Auth-Signature' => $this->getSignature()
+        ];
+    }
+
+    // SETTERS
+
+    public function method($value)
+    {
+        $this->method = strtolower($value);
+        return $this;
+    }
+
+    public function url($value)
+    {
+        $this->url = $value;
+        return $this;
+    }
+
+    public function queryData($value)
+    {
+        if ($value === null) {
+            $value = [
+                'b' => 'banana',
+                'a' => 'apple',
+                'c' => 'carrot'
+            ];
+        }
+        $this->queryData = $value;
+        return $this;
+    }
+
+    public function postData($value)
+    {
+        if ($value === null) {
+            $value = [
+                'b' => 'banana',
+                'a' => 'apple',
+                'c' => 'carrot'
+            ];
+        }
+        $this->postData = $value;
+        return $this;
+    }
+
+    public function user($value)
+    {
+        if ($value === null)
+            $value = $this->users[1];
+        $this->user = $value;
+        return $this;
+    }
+
+    public function nonce($value)
+    {
+        $this->nonce = $value;
+        return $this;
+    }
+
+    public function timestamp($value)
+    {
+        $this->timestamp = $value;
+        return $this;
+    }
+
+    public function glue($value)
+    {
+        $this->glue = $value;
+        return $this;
+    }
+
+    public function signatureString($value)
+    {
+        $this->signatureString = $value;
+        return $this;
+    }
+
+    public function signature($value)
+    {
+        $this->signature = $value;
+        return $this;
+    }
+
+    public function headers($value)
+    {
+        $this->headers = $value;
+        return $this;
+    }
+
+    public function resource($value)
+    {
+        $this->resource = $value;
+        return $this;
     }
 }

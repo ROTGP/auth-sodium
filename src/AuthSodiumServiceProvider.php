@@ -19,68 +19,64 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
-        /**
-         * https://yish.dev/ordering-laravel-middleware-priority
-         * We want this to run early,
-         * so we prepend it to the beginning
-         * of the array.
-         */
-        $kernel->prependToMiddlewarePriority(AuthSodiumMiddleware::class);
+        $middlewareName = authSodium()->middlewareName();
+        $middlewareGroup = authSodium()->middlewareGroup();
+        $useGlobalMiddleware = authSodium()->useGlobalMiddleware();
+        $usingMiddleware = !empty($middlewareName) || 
+            !empty($middlewareGroup) ||
+            $useGlobalMiddleware === true;
 
         /**
-         * This will run the middleware
-         * ONLY if the route specifies 
-         * it, ie: 
-         * 
-         * Route::resource('foos', FooController::class)->middleware('authsodium');
+         * https://yish.dev/ordering-laravel-middleware-priority
+         * We want this to run early, so we prepend it
+         * to the beginning of the array.
          */
-        $middlewareName = authSodium()->middlewareName();
+        if ($usingMiddleware)
+            $kernel->prependToMiddlewarePriority(AuthSodiumMiddleware::class);
+
+        /**
+         * This will run the middleware ONLY if the
+         * route specifies it, ie: 
+         *
+         * `Route::resource('foos', FooController::class)->middleware('authsodium');`
+         */
         if ($middlewareName !== null)
             $router->aliasMiddleware($middlewareName, AuthSodiumMiddleware::class);
         
         /**
-         * This adds the AuthSodium
-         * middleware to the 'web'
-         * group (for example), as 
-         * such, the middleware will
-         * automatically run when the
-         * route contains 'web'
-         * middleware
-         * 
-         * Route::resource('foos', FooController::class)->middleware('web');
-         * 
+         * This adds the AuthSodium middleware to the
+         * 'web' group (for example), as such, the
+         * middleware will automatically run when the
+         * route contains 'web' middleware
+         *
+         * `Route::resource('foos', FooController::class)->middleware('web');`
+         *
          * Or of course when the route exists in
-         * routes/web.php
+         * `routes/web.php`
          */
-        $middlewareGroup = authSodium()->middlewareGroup();
         if ($middlewareGroup !== null)
             $router->pushMiddlewareToGroup($middlewareGroup, AuthSodiumMiddleware::class);
 
         /**
-         * This will run the AuthSodium
-         * middleware on ALL requests,
-         * regardless of the middleware
-         * specifiedfor the route. Not
-         * very flexible as soon routes
-         * will not need an auth user 
-         * (ie, user registration).
+         * This will run the AuthSodium middleware on
+         * ALL requests, regardless of the middleware
+         * specifiedfor the route. Not very flexible as
+         * soon routes will not need an auth user (ie,
+         * user registration).
          */
-        if (authSodium()->useGlobalMiddleware() === true)
+        if ($useGlobalMiddleware === true)
             $kernel->pushMiddleware(AuthSodiumMiddleware::class);
 
         /**
-         * This is a closure - it will
-         * not get executeduntil it is
-         * called explicitly with the
-         * following: 
-         *  - Auth::guard('authsodium')->user()
-         *  - Auth::guard('authsodium')->check()
-         * 
-         * It will NOT get called just
-         * because a route isusing the
-         * authsodium middleware.
+         * Auth::viaRequest is a closure - it will not
+         * get executeduntil it is called explicitly
+         * with the following: 
+         *  - `Auth::guard('authsodium')->user()`
+         *  - `Auth::guard('authsodium')->check()`
+         *
+         * It will NOT get called just because a route
+         * is using the authsodium middleware.
          */
-
         $guardName = authSodium()->guardName();
         if ($guardName !== null) {
             Auth::viaRequest($guardName, function ($request) {
@@ -94,14 +90,18 @@ class AuthSodiumServiceProvider extends ServiceProvider
             
             /**
              * @NOTE: the following can be published in
-             * the consuming app by calling the following: 
-             * php artisan vendor:publish --provider="ROTGP\AuthSodium\AuthSodiumServiceProvider" --tag="config"
+             * the consuming app by calling the
+             * following: 
+             * 
+             * `php artisan vendor:publish --provider="ROTGP\AuthSodium\AuthSodiumServiceProvider" --tag="config"`
              */
             $this->publishes([
                 __DIR__.'/../config/config.php' => config_path('authsodium.php'),
             ], 'config');
         }
     }
+
+    
 
     public function register()
     {
@@ -113,7 +113,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */
 
         $guardName = authSodium()->guardName();
-        if ($guardName !== null)
-            Config::set('auth.guards.' . $guardName, ['driver' => $guardName]);
+        if (!empty($guardName))
+            config(['auth.guards.' . $guardName => ['driver' => $guardName]]);
     }
 }
