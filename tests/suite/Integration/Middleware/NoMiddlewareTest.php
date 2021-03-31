@@ -16,22 +16,12 @@ class NoMiddlewareTest extends IntegrationTestCase
     public function test_that_unsigned_request_to_unprotected_resource_succeeds()
     {
         $response = $this->request()->response(false);
-        $json = $this->decodeResponse($response);
-
-        $response->assertStatus(200);
-        $this->assertCount(10, $json);
-        $this->assertEquals('Kallie Langosh', $json[0]['name']);
-        $this->assertEquals('Rex Lemke DVM', $json[9]['name']);
+        $this->assertSuccessfulRequest($response);
     }
 
     public function test_that_signed_request_to_unprotected_resource_succeeds()
     {
         $response = $this->request()->response(false);
-        $json = $this->decodeResponse($response);
-
-        $response->assertStatus(200);
-        $this->assertCount(10, $json);
-        $this->assertEquals('Kallie Langosh', $json[0]['name']);
-        $this->assertEquals('Rex Lemke DVM', $json[9]['name']);
+        $this->assertSuccessfulRequest($response);
     }
 }

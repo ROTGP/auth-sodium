@@ -2,7 +2,7 @@
 
 namespace ROTGP\AuthSodium;
 
-use ROTGP\AuthSodium\Http\Middleware\AuthSodiumMiddleware;
+// use ROTGP\AuthSodium\Http\Middleware\AuthSodiumMiddleware;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Router;
@@ -32,7 +32,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * to the beginning of the array.
          */
         if ($usingMiddleware)
-            $kernel->prependToMiddlewarePriority(AuthSodiumMiddleware::class);
+            $kernel->prependToMiddlewarePriority(config('authsodium.delegate'));
 
         /**
          * This will run the middleware ONLY if the
@@ -41,7 +41,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * `Route::resource('foos', FooController::class)->middleware('authsodium');`
          */
         if ($middlewareName !== null)
-            $router->aliasMiddleware($middlewareName, AuthSodiumMiddleware::class);
+            $router->aliasMiddleware($middlewareName, config('authsodium.delegate'));
         
         /**
          * This adds the AuthSodium middleware to the
@@ -55,21 +55,21 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * `routes/web.php`
          */
         if ($middlewareGroup !== null)
-            $router->pushMiddlewareToGroup($middlewareGroup, AuthSodiumMiddleware::class);
+            $router->pushMiddlewareToGroup($middlewareGroup, config('authsodium.delegate'));
 
         /**
          * This will run the AuthSodium middleware on
          * ALL requests, regardless of the middleware
-         * specifiedfor the route. Not very flexible as
+         * specified for the route. Not very flexible as
          * soon routes will not need an auth user (ie,
          * user registration).
          */
         if ($useGlobalMiddleware === true)
-            $kernel->pushMiddleware(AuthSodiumMiddleware::class);
+            $kernel->pushMiddleware(config('authsodium.delegate'));
 
         /**
          * Auth::viaRequest is a closure - it will not
-         * get executeduntil it is called explicitly
+         * get executed until it is called explicitly
          * with the following: 
          *  - `Auth::guard('authsodium')->user()`
          *  - `Auth::guard('authsodium')->check()`
@@ -80,7 +80,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
         $guardName = authSodium()->guardName();
         if ($guardName !== null) {
             Auth::viaRequest($guardName, function ($request) {
-                return authSodium()->validateRequest($request);
+                return authSodium()->validateRequest($request, false);
             });
         }
 

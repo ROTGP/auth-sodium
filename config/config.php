@@ -34,7 +34,7 @@ return [
          * The name of the model field/column used for
          * storing the public key
          */
-        'public_key' => 'public_key',
+        'public_key_identifier' => 'public_key',
     ],
 
     /**
@@ -117,7 +117,7 @@ return [
          * If false, then requests lacking a signature
          * will proceed, but Auth::user() will be null.
          */
-        'abort_with_invalid_signatures' => true,
+        'abort_on_invalid_signature' => true,
     ]
 
 

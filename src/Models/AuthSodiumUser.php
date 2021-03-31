@@ -65,7 +65,7 @@ abstract class AuthSodiumUser extends Model implements Authenticatable
      */
     public function getRememberToken()
     {
-        throw new Exception('Not supported');
+        // not supported
     }
 
     /**
@@ -76,7 +76,7 @@ abstract class AuthSodiumUser extends Model implements Authenticatable
      */
     public function setRememberToken($value)
     {
-        throw new Exception('Not supported');
+        // not supported
     }
 
     /**
@@ -86,6 +86,6 @@ abstract class AuthSodiumUser extends Model implements Authenticatable
      */
     public function getRememberTokenName()
     {
-        throw new Exception('Not supported');
+        // not supported
     }
 }

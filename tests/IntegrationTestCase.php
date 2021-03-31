@@ -150,6 +150,15 @@ class IntegrationTestCase extends TestCase
         // $this->assertEquals('Forbidden', $json['http_status_message']);
     }
 
+    protected function assertSuccessfulRequest($response)
+    {
+        $response->assertStatus(200);
+        $json = $this->decodeResponse($response);
+        $this->assertCount(10, $json);
+        $this->assertEquals('Kallie Langosh', $json[0]['name']);
+        $this->assertEquals('Rex Lemke DVM', $json[9]['name']);
+    }
+
     protected function assertAssociativeArray($value)
     {
         $this->assertTrue($this->isAssociative($value));

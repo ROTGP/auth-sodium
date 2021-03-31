@@ -3,11 +3,55 @@
 namespace ROTGP\AuthSodium;
 
 use Symfony\Component\HttpFoundation\Response;
+
 use Auth;
+use Closure;
 use Exception;
 
 class AuthSodiumDelegate
 {
+    protected $abortOnInvalidSignature = true;
+
+    public function handle($request, Closure $next)
+    {
+        // dd(request()->route()->getName());
+        // echo("AuthSodiumMiddleware!\n\n\n");
+
+        // https://laravelpackage.com/11-middleware.html#testing-after-middleware
+        // https://laracasts.com/discuss/channels/general-discussion/register-middleware-via-service-provider?page=2
+
+        // if we're already logged in - then abandon auth
+        // if (Auth::check() === true) {
+        //     return $next($request);
+        // }
+        
+        // $foo = 'bar';
+        // Auth::login($foo);
+        // dd(Auth::user());
+
+        // dd(config(
+        //     'authsodium.middleware.abort_on_invalid_signature',
+        //     true
+        // ));
+
+        $ok = $this->validateRequest(
+            $request,
+            config(
+                'authsodium.middleware.abort_on_invalid_signature',
+                true
+            )
+        );
+        
+        // echo 'ok? ' . $ok;
+
+        // $user = new User(['name' => 'Tim Allen']);
+        // dd('getAuthIdentifier', $user->getAuthIdentifier());
+        // Auth::login($user);
+        // dd('mkkkkkkkx', $user, Auth::user());
+
+        return $next($request);
+    }
+
     /**
      * Return the method of the incoming request. Ie,
      * get, put, post or delete. We use lowercase as
@@ -237,10 +281,10 @@ class AuthSodiumDelegate
     }
 
     // the field used to uniquely identify the user
-    protected function userPublicKey()
+    protected function userPublicKeyIdentifier()
     {
         return config(
-            'authsodium.user.public_key',
+            'authsodium.user.public_key_identifier',
             'public_key'
         );
     }
@@ -255,7 +299,7 @@ class AuthSodiumDelegate
         );
 
         // @TODO validate that not empty or null
-        if (empty($signature)) {
+        if (empty($signature) && $this->shouldAbort()) {
             $this->errorResponse(null, 400, ['nope' => 'no signature found']);
         }
 
@@ -264,8 +308,12 @@ class AuthSodiumDelegate
 
     protected function retrievePublicKey($user)
     {
-        $publicKey = $user[$this->userPublicKey()];
         // @TODO validate public key
+        if ($user === null) {
+            return null;
+        }
+        $publicKey = $user[$this->userPublicKeyIdentifier()];
+        
         return $this->decode($publicKey);
     }
 
@@ -286,11 +334,16 @@ class AuthSodiumDelegate
         $model::setEventDispatcher($dispatcher);
 
         // @TODO validate that user is not null
-        if ($user === null) {
+        if ($user === null && $this->shouldAbort()) {
             $this->errorResponse(null, 400, ['nope' => 'no user found']);
         }
 
         return $user;
+    }
+
+    protected function shouldAbort()
+    {
+        return $this->abortOnInvalidSignature !== false;
     }
 
     public function buildSignatureString($request)
@@ -310,26 +363,36 @@ class AuthSodiumDelegate
         return implode($this->glue(), array_values($toSign));
     }
 
-    public function validateRequest($request)
+    public function validateRequest($request, $abortOnInvalidSignature = true)
     {
-        // dd('here we are', $request->route()->getName(), $request->route()->uri(), $request->route());
-        // return null;
+        $this->abortOnInvalidSignature = $abortOnInvalidSignature;
         $user = $this->retrieveUser($request);
         $publicKey = $this->retrievePublicKey($user);
         $signatureToVerify = $this->retrieveSignature($request);
         $message = $this->buildSignatureString($request);
-        // dd($message);
-        $signatureIsValid = sodium_crypto_sign_verify_detached(
-            $signatureToVerify,
-            $message,
-            $publicKey
-        );
+        
+        $signatureIsValid = false;
+       
+        if (!empty($signatureToVerify) && !empty($message) && !empty($publicKey)) {
+            
+            $signatureIsValid = sodium_crypto_sign_verify_detached(
+                $signatureToVerify,
+                $message,
+                $publicKey
+            );
+        }
+
+        // dd($user, $signatureIsValid);
 
         if ($signatureIsValid !== true) {
+            Auth::logout();
+        } else if ($signatureIsValid === true) {
+            Auth::login($user, false);
+        }
+
+        if ($signatureIsValid !== true && $this->shouldAbort()) {
             $this->errorResponse(null, 400, ['nope' => 'invalid signature']);
         }
-        
-        return $user;
     }
 
     // protected function authorizeUser($user)
