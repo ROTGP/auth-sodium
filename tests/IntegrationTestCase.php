@@ -111,18 +111,6 @@ class IntegrationTestCase extends TestCase
             ->user($user)
             ->nonce($nonce)
             ->timestamp($timestamp);
-        
-       
-
-        $headers = [
-            'Nonce' => $nonce,
-            'Timestamp' => $timestamp,
-            'Signature' => $signature,
-            'User-Identifier' => $user['email']
-        ];
-
-        // dd($method, $resource, $headers, $postData);
-        return $this->withHeaders($headers)->{$method}($resource, $postData);
     }
 
     protected function decodeResponse($response)
@@ -148,6 +136,7 @@ class IntegrationTestCase extends TestCase
         // $this->assertEquals(400, $json['http_status_code']);
         // $this->assertArrayHasKey('http_status_message', $json);
         // $this->assertEquals('Forbidden', $json['http_status_message']);
+        $this->assertNull(Auth::user());
     }
 
     protected function assertSuccessfulRequest($response)
@@ -157,6 +146,19 @@ class IntegrationTestCase extends TestCase
         $this->assertCount(10, $json);
         $this->assertEquals('Kallie Langosh', $json[0]['name']);
         $this->assertEquals('Rex Lemke DVM', $json[9]['name']);
+    }
+
+    protected function assertUserLoggedIn($user = null)
+    {
+        if ($user === null)
+            $user = $this->users[0]['model'];
+
+        $this->assertTrue($user->is(Auth::user()));
+    }
+
+    protected function assertUserNotLoggedIn()
+    {
+        $this->assertNull(Auth::user());
     }
 
     protected function assertAssociativeArray($value)
@@ -346,7 +348,7 @@ class IntegrationTestCase extends TestCase
     public function user($value)
     {
         if ($value === null)
-            $value = $this->users[1];
+            $value = $this->users[0];
         $this->user = $value;
         return $this;
     }

@@ -17,11 +17,13 @@ class GlobalMiddlewareTest extends IntegrationTestCase
     {
         $response = $this->request()->response(false);
         $this->assertBadRequest($response);
+        $this->assertUserNotLoggedIn();
     }
 
     public function test_that_signed_request_to_resource_protected_by_global_middleware_succeeds()
     {
         $response = $this->request()->response(true);
         $this->assertSuccessfulRequest($response);
+        $this->assertUserLoggedIn();
     }
 }

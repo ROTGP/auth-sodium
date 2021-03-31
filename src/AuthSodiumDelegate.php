@@ -24,32 +24,23 @@ class AuthSodiumDelegate
         // if (Auth::check() === true) {
         //     return $next($request);
         // }
-        
-        // $foo = 'bar';
-        // Auth::login($foo);
-        // dd(Auth::user());
 
-        // dd(config(
-        //     'authsodium.middleware.abort_on_invalid_signature',
-        //     true
-        // ));
-
-        $ok = $this->validateRequest(
+        $this->validateRequest(
             $request,
             config(
                 'authsodium.middleware.abort_on_invalid_signature',
                 true
             )
         );
-        
-        // echo 'ok? ' . $ok;
-
-        // $user = new User(['name' => 'Tim Allen']);
-        // dd('getAuthIdentifier', $user->getAuthIdentifier());
-        // Auth::login($user);
-        // dd('mkkkkkkkx', $user, Auth::user());
 
         return $next($request);
+    }
+
+    public function terminate($request, $response)
+    {
+        if (config('authsodium.middleware.log_out_after_request'))
+            Auth::logout();
+        
     }
 
     /**
@@ -382,8 +373,6 @@ class AuthSodiumDelegate
             );
         }
 
-        // dd($user, $signatureIsValid);
-
         if ($signatureIsValid !== true) {
             Auth::logout();
         } else if ($signatureIsValid === true) {
@@ -423,6 +412,8 @@ class AuthSodiumDelegate
 
     protected function errorResponse($errorCode = null, int $httpStatusCode = 401, $extras = []) : void
     {
+        Auth::logout();
+
         if (!is_int($httpStatusCode)) {
             throw new Exception('HTTP status code is required');
         }

@@ -13,9 +13,6 @@ class CreateAuthSodiumTables extends Migration
      */
     public function up()
     {
-        
-        // dd(['userForeignKey' => $userForeignKey, 'usersTable' => $usersTable, 'userKeyName' => $userKeyName]);
-
         Schema::create('nonces', function (Blueprint $table) {  
 
             $userModel = authSodium()->authUserModel();

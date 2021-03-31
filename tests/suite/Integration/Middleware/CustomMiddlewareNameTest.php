@@ -18,11 +18,13 @@ class CustomMiddlewareNameTest extends IntegrationTestCase
     {
         $response = $this->request()->response(true);
         $this->assertSuccessfulRequest($response);
+        $this->assertUserLoggedIn();
     }
 
     public function test_that_unsigned_request_to_resource_protected_by_custom_middleware_name_fails()
     {
         $response = $this->request()->response(false);
         $this->assertBadRequest($response);
+        $this->assertUserNotLoggedIn();
     }
 }

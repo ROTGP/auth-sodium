@@ -16,6 +16,7 @@ class NamedMiddlewareTest extends IntegrationTestCase
     {
         $response = $this->request()->response(false);
         $this->assertBadRequest($response);
+        $this->assertUserNotLoggedIn();
     }
 
     public function test_that_signed_request_to_resource_protected_by_named_middleware_succeeds()
@@ -23,11 +24,6 @@ class NamedMiddlewareTest extends IntegrationTestCase
         $response = $this->request()->response(true);
        
         $response->assertStatus(200);
-        // $json = $this->decodeResponse($response);
-        // $this->assertCount(10, $json);
-
-
-        // // dd($response);
-        // $this->assertSuccessfulRequest($response);
+        $this->assertUserLoggedIn();
     }
 }

@@ -10,7 +10,6 @@ class FooController extends BaseController
 {
     public function index()
     {
-       
         // dd('mk', $id, optional(Auth::guard('authsodium')->user())->toArray());
         return $this->respond(Foo::all());
     }
