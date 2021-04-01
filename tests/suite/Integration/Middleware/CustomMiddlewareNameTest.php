@@ -14,17 +14,16 @@ class CustomMiddlewareNameTest extends IntegrationTestCase
         config(['authsodium.middleware.name' => 'my-middleware-name']);
     }
 
-    public function test_that_signed_request_to_resource_protected_by_custom_middleware_name_succeeds()
-    {
-        $response = $this->request()->response(true);
-        $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedIn();
-    }
-
     public function test_that_unsigned_request_to_resource_protected_by_custom_middleware_name_fails()
     {
-        $response = $this->request()->response(false);
+        $response = $this->unsigned()->request()->response();
         $this->assertBadRequest($response);
         $this->assertUserNotLoggedIn();
+    }
+
+    public function test_that_signed_request_to_resource_protected_by_custom_middleware_name_succeeds()
+    {
+        $response = $this->signed()->request()->response();
+        $this->assertSuccessfulRequest($response);
     }
 }

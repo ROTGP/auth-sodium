@@ -10,37 +10,17 @@ use Exception;
 
 class AuthSodiumDelegate
 {
-    protected $abortOnInvalidSignature = true;
+    protected $guardName;
 
     public function handle($request, Closure $next)
-    {
-        // dd(request()->route()->getName());
-        // echo("AuthSodiumMiddleware!\n\n\n");
-
-        // https://laravelpackage.com/11-middleware.html#testing-after-middleware
-        // https://laracasts.com/discuss/channels/general-discussion/register-middleware-via-service-provider?page=2
-
-        // if we're already logged in - then abandon auth
-        // if (Auth::check() === true) {
-        //     return $next($request);
-        // }
-
-        $this->validateRequest(
-            $request,
-            config(
-                'authsodium.middleware.abort_on_invalid_signature',
-                true
-            )
+    {        
+        $abortOnInvalidSignature = config(
+            'authsodium.middleware.abort_on_invalid_signature',
+            true
         );
+        $this->validateRequest($request, $abortOnInvalidSignature);
 
         return $next($request);
-    }
-
-    public function terminate($request, $response)
-    {
-        if (config('authsodium.middleware.log_out_after_request'))
-            Auth::logout();
-        
     }
 
     /**
@@ -280,7 +260,7 @@ class AuthSodiumDelegate
         );
     }
 
-    protected function retrieveSignature($request)
+    protected function retrieveSignature($request, $abortOnInvalidSignature)
     {
         $signature = $request->header(
             config(
@@ -290,7 +270,7 @@ class AuthSodiumDelegate
         );
 
         // @TODO validate that not empty or null
-        if (empty($signature) && $this->shouldAbort()) {
+        if (empty($signature) && $abortOnInvalidSignature) {
             $this->errorResponse(null, 400, ['nope' => 'no signature found']);
         }
 
@@ -308,7 +288,7 @@ class AuthSodiumDelegate
         return $this->decode($publicKey);
     }
 
-    protected function retrieveUser($request)
+    protected function retrieveUser($request, $abortOnInvalidSignature)
     {
         $model = $this->authUserModel();
         
@@ -325,20 +305,15 @@ class AuthSodiumDelegate
         $model::setEventDispatcher($dispatcher);
 
         // @TODO validate that user is not null
-        if ($user === null && $this->shouldAbort()) {
+        if ($user === null && $abortOnInvalidSignature) {
             $this->errorResponse(null, 400, ['nope' => 'no user found']);
         }
 
         return $user;
     }
 
-    protected function shouldAbort()
-    {
-        return $this->abortOnInvalidSignature !== false;
-    }
-
     public function buildSignatureString($request)
-    {        
+    {
         $toSign = [];
         $toSign['method'] = $this->getSignatureMethod($request);
         $toSign['url'] = $this->getSignatureUrl($request);
@@ -347,19 +322,15 @@ class AuthSodiumDelegate
         $toSign['user_identifier'] = $this->getUserIdentifier($request);
         $toSign['nonce'] = $this->getSignatureNonce($request);
         $toSign['timestamp'] = $this->getSignatureTimestamp($request);
-        
-        // dd(implode($this->glue(),
-        // array_values($toSign)));
-        
         return implode($this->glue(), array_values($toSign));
     }
 
-    public function validateRequest($request, $abortOnInvalidSignature = true)
+    public function validateRequest($request, $abortOnInvalidSignature = true, $guardName = null)
     {
-        $this->abortOnInvalidSignature = $abortOnInvalidSignature;
-        $user = $this->retrieveUser($request);
+        $this->guardName = $guardName;
+        $user = $this->retrieveUser($request, $abortOnInvalidSignature);
         $publicKey = $this->retrievePublicKey($user);
-        $signatureToVerify = $this->retrieveSignature($request);
+        $signatureToVerify = $this->retrieveSignature($request, $abortOnInvalidSignature);
         $message = $this->buildSignatureString($request);
         
         $signatureIsValid = false;
@@ -373,22 +344,12 @@ class AuthSodiumDelegate
             );
         }
 
-        if ($signatureIsValid !== true) {
-            Auth::logout();
-        } else if ($signatureIsValid === true) {
-            Auth::login($user, false);
-        }
-
-        if ($signatureIsValid !== true && $this->shouldAbort()) {
+        if ($signatureIsValid !== true && $abortOnInvalidSignature) {
             $this->errorResponse(null, 400, ['nope' => 'invalid signature']);
         }
-    }
 
-    // protected function authorizeUser($user)
-    // {
-    //     Auth::login($user);
-    //     Auth::guard($this->middlewareName())->login($user);
-    // }
+        return $user;
+    }
 
     /**
      * Return an instance of the user-defined User model.
@@ -412,8 +373,6 @@ class AuthSodiumDelegate
 
     protected function errorResponse($errorCode = null, int $httpStatusCode = 401, $extras = []) : void
     {
-        Auth::logout();
-
         if (!is_int($httpStatusCode)) {
             throw new Exception('HTTP status code is required');
         }

@@ -4,6 +4,8 @@ namespace ROTGP\AuthSodium\Test\Controllers;
 
 use Illuminate\Routing\Controller;
 
+use Symfony\Component\HttpFoundation\Response;
+
 class BaseController extends Controller
 {
     protected function getResponseStatusCode() : int
@@ -21,8 +23,24 @@ class BaseController extends Controller
         }
     }
 
-    public function respond($json) 
-{
-    return response()->json($json, $this->getResponseStatusCode());
-}
+    protected function respond($json) 
+    {
+        return response()->json($json, $this->getResponseStatusCode());
+    }
+
+    protected function errorResponse(int $httpStatusCode = 400, $extras = []) : void
+    {
+        // Auth::logout();
+
+        $responseData = [
+            'http_status_code' => $httpStatusCode,
+            'http_status_message' => Response::$statusTexts[$httpStatusCode]
+        ];
+
+        if (sizeof($extras) > 0) {
+            $responseData = array_merge($responseData, $extras);
+        }
+
+        abort(response()->json($responseData, $httpStatusCode));
+    }
 }

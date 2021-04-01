@@ -15,14 +15,14 @@ class NoMiddlewareTest extends IntegrationTestCase
    
     public function test_that_unsigned_request_to_unprotected_resource_succeeds()
     {
-        $response = $this->request()->response(false);
+        $response = $this->unsigned()->request()->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserNotLoggedIn();
     }
 
     public function test_that_signed_request_to_unprotected_resource_succeeds()
     {
-        $response = $this->request()->response(false);
+        $response = $this->signed()->request()->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserNotLoggedIn();
     }

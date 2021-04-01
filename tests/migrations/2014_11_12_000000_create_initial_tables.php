@@ -24,12 +24,14 @@ class CreateInitialTables extends Migration
         Schema::create('foos', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->integer('user_id');
             $table->timestamps();
         });
 
         Schema::create('bars', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->integer('user_id');
             $table->timestamps();
         });
     }

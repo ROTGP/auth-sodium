@@ -2,7 +2,6 @@
 
 namespace ROTGP\AuthSodium;
 
-// use ROTGP\AuthSodium\Http\Middleware\AuthSodiumMiddleware;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Router;
@@ -79,8 +78,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */
         $guardName = authSodium()->guardName();
         if ($guardName !== null) {
-            Auth::viaRequest($guardName, function ($request) {
-                return authSodium()->validateRequest($request, false);
+            Auth::viaRequest($guardName, function ($request) use ($guardName) {
+                return authSodium()->validateRequest($request, false, $guardName);
             });
         }
 

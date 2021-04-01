@@ -16,15 +16,14 @@ class AbortMiddlewareTest extends IntegrationTestCase
     
     public function test_that_unsigned_request_to_resource_protected_by_global_middleware_should_not_abort()
     {
-        $response = $this->request()->response(false);
+        $response = $this->unsigned()->request()->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserNotLoggedIn();
     }
 
     public function test_that_signed_request_to_resource_protected_by_global_middleware_should_not_abort()
     {
-        $response = $this->request()->response(true);
+        $response = $this->signed()->request()->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedIn();
     }
 }

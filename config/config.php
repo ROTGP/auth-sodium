@@ -117,20 +117,7 @@ return [
          * If false, then requests lacking a signature
          * will proceed, but Auth::user() will be null.
          */
-        'abort_on_invalid_signature' => true,
-
-        /**
-         * This shouldn't be necessary, but it can be
-         * taken as an extra precaution.
-         *
-         * https://laravel.com/docs/8.x/middleware#terminable-middleware
-         *
-         * If true, and your server supports terminating
-         * middleware, then Auth::logout will explicitly
-         * be called after the response has been sent to
-         * the browser.
-         */
-        'log_out_after_request' => false,
+        'abort_on_invalid_signature' => true
     ]
 
 
