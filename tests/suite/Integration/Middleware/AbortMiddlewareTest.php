@@ -18,7 +18,6 @@ class AbortMiddlewareTest extends IntegrationTestCase
     {
         $response = $this->unsigned()->request()->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserNotLoggedIn();
     }
 
     public function test_that_signed_request_to_resource_protected_by_global_middleware_should_not_abort()

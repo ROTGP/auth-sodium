@@ -20,7 +20,6 @@ class GroupMiddlewareTest extends IntegrationTestCase
     {
         $response = $this->unsigned()->request()->response();
         $this->assertBadRequest($response);
-        $this->assertUserNotLoggedIn();
     }
 
     public function test_that_signed_request_to_resource_protected_by_group_middleware_succeeds()

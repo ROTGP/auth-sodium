@@ -150,22 +150,6 @@ abstract class IntegrationTestCase extends TestCase
         $this->assertEquals('Rex Lemke DVM', $json[9]['name']);
     }
 
-    protected function assertUserLoggedIn($user = null)
-    {
-        // if ($user === null)
-        //     $user = $this->users[0]['model'];
-
-        $this->assertTrue(true);
-
-        // @TODO get rid of this
-        // $this->assertTrue($user->is(Auth::user()));
-    }
-
-    protected function assertUserNotLoggedIn()
-    {
-        $this->assertNull(Auth::user());
-    }
-
     protected function assertAssociativeArray($value)
     {
         $this->assertTrue($this->isAssociative($value));

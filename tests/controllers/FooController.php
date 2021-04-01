@@ -19,9 +19,7 @@ class FooController extends BaseController
     {
         if (!Auth::guard('authsodium')->check())
             $this->errorResponse(400, ['nope' => 'no authorized user']);
-        
-        // dd(Auth::user(), Auth::guard('authsodium')->check());
-        
+                
         $payload = request()->post();
         $payload['user_id'] = Auth::guard('authsodium')->user()->id;
         return $this->respond(Foo::create($payload));

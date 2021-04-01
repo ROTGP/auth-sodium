@@ -17,7 +17,6 @@ class GlobalMiddlewareTest extends IntegrationTestCase
     {
         $response = $this->unsigned()->request()->response();
         $this->assertBadRequest($response);
-        $this->assertUserNotLoggedIn();
     }
 
     public function test_that_signed_request_to_resource_protected_by_global_middleware_succeeds()
