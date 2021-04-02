@@ -53,8 +53,22 @@ return [
     'guard' => [
 
         /**
-         * Return a string to identify the AuthSodium
-         * guard name.
+         * Return a string to identify the guard name,
+         * which is essentially an alias. If this is
+         * specified, then the Auth facade itself will
+         * be remain untouched, and instead you can use
+         * Auth::guard('name'). For example:
+         *
+         * - Auth::guard('name')->check() // bool
+         * - Auth::guard('name')->user() // object|null
+         * - Auth::guard('name')->id() //
+         *   int|string|null
+         * - Auth::guard('name')->guest() // bool
+         * - Auth::guard('name')->authenticateSignature()
+         *   // bool
+         * - Auth::guard('name')->invalidateUser() //
+         *   bool
+         *
          */
         'name' => 'authsodium',
     ],
@@ -117,7 +131,20 @@ return [
          * If false, then requests lacking a signature
          * will proceed, but Auth::user() will be null.
          */
-        'abort_on_invalid_signature' => true
+        'abort_on_invalid_signature' => true,
+
+        /**
+         * This shouldn't be necessary, but it can be
+         * taken as an extra precaution.
+         *
+         * https://laravel.com/docs/8.x/middleware#terminable-middleware
+         *
+         * If true, and your server supports terminating
+         * middleware, then Auth::logout will explicitly
+         * be called after the response has been sent to
+         * the browser.
+         */
+        'log_out_after_request' => false,
     ]
 
 

@@ -17,11 +17,15 @@ class FooController extends BaseController
 
     public function store()
     {
-        if (!Auth::guard('authsodium')->check())
-            $this->errorResponse(400, ['nope' => 'no authorized user']);
+        // if (!Auth::guard('authsodium')->check())
+        //     $this->errorResponse(400, ['nope' => 'no authorized user']);
                 
         $payload = request()->post();
-        $payload['user_id'] = Auth::guard('authsodium')->user()->id;
+        $payload['user_id'] = Auth::guard('authsodium')->id();
+        
+        // Auth::authenticateSignature();
+        // Auth::invalidateUser();
+        
         return $this->respond(Foo::create($payload));
     }
 

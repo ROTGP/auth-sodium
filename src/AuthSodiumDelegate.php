@@ -2,24 +2,103 @@
 
 namespace ROTGP\AuthSodium;
 
+use Illuminate\Contracts\Auth\Guard;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Symfony\Component\HttpFoundation\Response;
 
 use Auth;
 use Closure;
 use Exception;
 
-class AuthSodiumDelegate
+class AuthSodiumDelegate implements Guard
 {
-    protected $guardName;
+    protected $user;
+
+    /**
+     * Determine if the current user is authenticated.
+     *
+     * @return bool
+     */
+    public function check()
+    {
+        $this->authenticateSignature();
+        return ! is_null($this->user);
+    }
+
+    /**
+     * Determine if the current user is a guest.
+     *
+     * @return bool
+     */
+    public function guest()
+    {
+        $this->authenticateSignature();
+        return ! $this->check();
+    }
+
+    /**
+     * Get the currently authenticated user.
+     *
+     * @return \Illuminate\Contracts\Auth\Authenticatable|null
+     */
+    public function user()
+    {
+        $this->authenticateSignature();
+        return $this->user;
+    }
+
+    /**
+     * Get the ID for the currently authenticated user.
+     *
+     * @return int|null
+     */
+    public function id()
+    {
+        $this->authenticateSignature();
+        if ($this->user) {
+            return $this->user->getAuthIdentifier();
+        }
+    }
+
+    /**
+     * Validate a user's credentials.
+     *
+     * @param  array  $credentials
+     * @return bool
+     */
+    public function validate(array $credentials = [])
+    {
+        throw new Exception("Method 'validate' not supported");
+    }
+
+    /**
+     * Set the current user.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @return void
+     */
+    public function setUser(Authenticatable $user)
+    {
+        $this->user = $user;
+    }
+
+    public function invalidateUser()
+    {
+        $this->user = null;
+    }
+
+    public function authenticateSignature()
+    {
+        if ($this->user) {
+            return true;
+        }
+        return $this->validateRequest(request());
+    }
 
     public function handle($request, Closure $next)
-    {        
-        $abortOnInvalidSignature = config(
-            'authsodium.middleware.abort_on_invalid_signature',
-            true
-        );
-        $this->validateRequest($request, $abortOnInvalidSignature);
-
+    {
+        $this->validateRequest($request);
+        
         return $next($request);
     }
 
@@ -183,7 +262,7 @@ class AuthSodiumDelegate
      */
     public function guardName()
     {
-        return config('authsodium.guard.name', 'authsodium');
+        return config('authsodium.guard.name', null);
     }
 
     /**
@@ -260,7 +339,7 @@ class AuthSodiumDelegate
         );
     }
 
-    protected function retrieveSignature($request, $abortOnInvalidSignature)
+    protected function retrieveSignature($request)
     {
         $signature = $request->header(
             config(
@@ -270,7 +349,7 @@ class AuthSodiumDelegate
         );
 
         // @TODO validate that not empty or null
-        if (empty($signature) && $abortOnInvalidSignature) {
+        if (empty($signature) && $this->abortOnInvalidSignature()) {
             $this->errorResponse(null, 400, ['nope' => 'no signature found']);
         }
 
@@ -288,7 +367,7 @@ class AuthSodiumDelegate
         return $this->decode($publicKey);
     }
 
-    protected function retrieveUser($request, $abortOnInvalidSignature)
+    protected function retrieveUser($request)
     {
         $model = $this->authUserModel();
         
@@ -305,7 +384,7 @@ class AuthSodiumDelegate
         $model::setEventDispatcher($dispatcher);
 
         // @TODO validate that user is not null
-        if ($user === null && $abortOnInvalidSignature) {
+        if ($user === null && $this->abortOnInvalidSignature()) {
             $this->errorResponse(null, 400, ['nope' => 'no user found']);
         }
 
@@ -325,12 +404,19 @@ class AuthSodiumDelegate
         return implode($this->glue(), array_values($toSign));
     }
 
-    public function validateRequest($request, $abortOnInvalidSignature = true, $guardName = null)
+    protected function abortOnInvalidSignature()
     {
-        $this->guardName = $guardName;
-        $user = $this->retrieveUser($request, $abortOnInvalidSignature);
+        return config(
+            'authsodium.middleware.abort_on_invalid_signature',
+            true
+        );
+    }
+
+    public function validateRequest($request)
+    {
+        $user = $this->retrieveUser($request);
         $publicKey = $this->retrievePublicKey($user);
-        $signatureToVerify = $this->retrieveSignature($request, $abortOnInvalidSignature);
+        $signatureToVerify = $this->retrieveSignature($request);
         $message = $this->buildSignatureString($request);
         
         $signatureIsValid = false;
@@ -344,11 +430,26 @@ class AuthSodiumDelegate
             );
         }
 
-        if ($signatureIsValid !== true && $abortOnInvalidSignature) {
+        if ($signatureIsValid !== true && $this->abortOnInvalidSignature()) {
             $this->errorResponse(null, 400, ['nope' => 'invalid signature']);
         }
 
-        return $user;
+        if ($signatureIsValid) {
+            if ($this->guardName() === null) {
+                Auth::setUser($user);
+            } else {
+                $this->setUser($user);
+            }
+        } else {
+            if ($this->guardName() === null) {
+                Auth::invalidateUser();
+            } else {
+                $this->invalidateUser();
+            }
+        }
+        
+        
+        return $signatureIsValid;
     }
 
     /**

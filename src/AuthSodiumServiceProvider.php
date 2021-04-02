@@ -18,6 +18,11 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
+        $this->app->singleton(config('authsodium.delegate'), function ($app) {
+            $delegate = config('authsodium.delegate');
+            return new $delegate;
+        });
+
         $middlewareName = authSodium()->middlewareName();
         $middlewareGroup = authSodium()->middlewareGroup();
         $useGlobalMiddleware = authSodium()->useGlobalMiddleware();
@@ -78,10 +83,37 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */
         $guardName = authSodium()->guardName();
         if ($guardName !== null) {
-            Auth::viaRequest($guardName, function ($request) use ($guardName) {
-                return authSodium()->validateRequest($request, false, $guardName);
+            
+            config(['auth.guards.' . $guardName => ['driver' => $guardName]]);
+            
+            // Return an instance of
+            // Illuminate\Contracts\Auth\Guard
+            // https://laravel.com/api/8.x/Illuminate/Contracts/Auth/Guard.html#method_setUser
+            // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/SessionGuard.php#L725
+            // https://github.com/laravel/framework/blob/7.x/src/Illuminate/Auth/SessionGuard.php#L823
+            // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/GuardHelpers.php#L81
+                
+            Auth::extend($guardName, function ($app, $name) {
+                $delegate = config('authsodium.delegate');
+                return new $delegate;
+            });
+        
+        /**
+         *  For a consistent API, if we're not using a
+         *  custom guard name, then add the following
+         *  methods to the Auth facade.
+         */ 
+        } else {
+
+            Auth::macro('authenticateSignature', function () {
+                return authSodium()->authenticateSignature();
+            });
+    
+            Auth::macro('invalidateUser', function () {
+                $this->user = null;
             });
         }
+        
 
         if ($this->app->runningInConsole()) {
 
@@ -100,19 +132,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
         }
     }
 
-    
-
     public function register()
     {
         $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'authsodium');
-
-        /**
-         * Makes the Auth::viaRequest('authsodium', ...)
-         * declaration above executable. 
-         */
-
-        $guardName = authSodium()->guardName();
-        if (!empty($guardName))
-            config(['auth.guards.' . $guardName => ['driver' => $guardName]]);
     }
 }
