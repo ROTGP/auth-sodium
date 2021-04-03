@@ -27,9 +27,9 @@ class AuthSodiumServiceProvider extends ServiceProvider
         //     return new $delegate;
         // });
 
-        $middlewareName = authSodium()->middlewareName();
-        $middlewareGroup = authSodium()->middlewareGroup();
-        $useGlobalMiddleware = authSodium()->useGlobalMiddleware();
+        $middlewareName = $delegate->middlewareName();
+        $middlewareGroup = $delegate->middlewareGroup();
+        $useGlobalMiddleware = $delegate->useGlobalMiddleware();
         $usingMiddleware = !empty($middlewareName) || 
             !empty($middlewareGroup) ||
             $useGlobalMiddleware === true;
