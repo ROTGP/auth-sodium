@@ -11,7 +11,7 @@ jobs:
     
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [windows-latest] #[ubuntu-latest, windows-latest, macOS-latest]
         php: [8.0, 7.4, 7.3]
         testbench: [6.0, 5.0]
         include:
@@ -29,7 +29,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: intl, fileinfo, pdo_sqlite
+          extensions: intl, fileinfo, pdo_sqlite, sodium
           ini-values: "post_max_size=256M"
 
       - name: Cache composer dependencies
