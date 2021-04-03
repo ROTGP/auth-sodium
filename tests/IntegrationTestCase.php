@@ -84,7 +84,7 @@ abstract class IntegrationTestCase extends TestCase
 
     protected function tearDown(): void
     {
-        Auth::logout();
+        // Auth::logout();
         parent::tearDown();
     }
 
@@ -150,13 +150,13 @@ abstract class IntegrationTestCase extends TestCase
         // $this->assertEquals(400, $json['http_status_code']);
         // $this->assertArrayHasKey('http_status_message', $json);
         // $this->assertEquals('Forbidden', $json['http_status_message']);
-        $this->assertNull(Auth::user());
+        // $this->assertNull(Auth::user());
     }
 
     protected function assertValidationError($response)
     {
         $response->assertStatus(422);
-        $this->assertNull(Auth::user());
+        // $this->assertNull(Auth::user());
     }
 
     protected function assertInternalServerError($response)
@@ -171,6 +171,19 @@ abstract class IntegrationTestCase extends TestCase
         $this->assertCount(10, $json);
         $this->assertEquals('Kallie Langosh', $json[0]['name']);
         $this->assertEquals('Rex Lemke DVM', $json[9]['name']);
+    }
+
+    protected function assertUserLoggedIn($user = null)
+    {
+        if (!$user) {
+            $user = $this->users[0]['model'];
+        }
+        $this->assertTrue($user->is(authSodium()->getUser()));
+    }
+
+    protected function assertUserLoggedOut()
+    {
+        $this->assertNull(authSodium()->getUser());
     }
 
     protected function assertAssociativeArray($value)

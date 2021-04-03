@@ -54,7 +54,7 @@ class AuthSodiumDelegate implements Guard
      *
      * @return \Illuminate\Contracts\Auth\Authenticatable|null
      */
-    protected function getUser()
+    public function getUser()
     {
         return $this->isGuard() ? $this->user : Auth::user();
     }
@@ -150,6 +150,19 @@ class AuthSodiumDelegate implements Guard
         $this->validateRequest($request, true);
         
         return $next($request);
+    }
+
+    /**
+     * https://laravel.com/docs/8.x/middleware#terminable-middleware
+     *
+     * If you define a terminate method on your middleware, it will automatically be
+     * called after the response is sent to the browser.
+     */
+    public function terminate($request, $response)
+    {
+        if (config('authsodium.middleware.log_out_after_request')) {
+            $this->invalidateUser();
+        }
     }
 
     /**

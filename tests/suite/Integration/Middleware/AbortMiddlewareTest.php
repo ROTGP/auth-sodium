@@ -14,15 +14,17 @@ class AbortMiddlewareTest extends IntegrationTestCase
         config([ 'authsodium.middleware.abort_on_invalid_signature' => false]);
     }
     
-    public function test_that_unsigned_request_to_resource_protected_by_global_middleware_should_not_abort()
+    public function test_that_unsigned_request_to_resource_protected_by_named_middleware_should_not_abort()
     {
         $response = $this->unsigned()->request()->response();
         $this->assertSuccessfulRequest($response);
+        $this->assertUserLoggedOut();
     }
 
-    public function test_that_signed_request_to_resource_protected_by_global_middleware_should_not_abort()
+    public function test_that_signed_request_to_resource_protected_by_named_middleware_should_not_abort()
     {
         $response = $this->signed()->request()->response();
         $this->assertSuccessfulRequest($response);
+        $this->assertUserLoggedIn();
     }
 }
