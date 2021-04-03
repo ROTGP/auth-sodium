@@ -18,9 +18,9 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
-        $delegate = authSodium();
-        // $foo = new $delegate;
-        $this->app->instance($delegate::class, $delegate);
+        $delegateNS = config('authsodium.delegate');
+        $delegate = app()->make($delegateNS);
+        $this->app->instance($delegateNS, $delegate);
 
         $middlewareName = $delegate->middlewareName();
         $middlewareGroup = $delegate->middlewareGroup();
@@ -35,7 +35,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * to the beginning of the array.
          */
         if ($usingMiddleware)
-            $kernel->prependToMiddlewarePriority($delegate::class);
+            $kernel->prependToMiddlewarePriority($delegateNS);
 
         /**
          * This will run the middleware ONLY if the
@@ -44,7 +44,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * `Route::resource('foos', FooController::class)->middleware('authsodium');`
          */
         if ($middlewareName)
-            $router->aliasMiddleware($middlewareName, $delegate::class);
+            $router->aliasMiddleware($middlewareName, $delegateNS);
         
         /**
          * This adds the AuthSodium middleware to the
@@ -59,7 +59,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */
 
         if ($middlewareGroup)
-            $router->pushMiddlewareToGroup($middlewareGroup, $delegate::class);
+            $router->pushMiddlewareToGroup($middlewareGroup, $delegateNS);
 
         /**
          * This will run the AuthSodium middleware on
@@ -69,7 +69,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * user registration).
          */
         if ($useGlobalMiddleware)
-            $kernel->pushMiddleware($delegate::class);
+            $kernel->pushMiddleware($delegateNS);
 
         /**
          * Auth::viaRequest is a closure - it will not
@@ -94,7 +94,6 @@ class AuthSodiumServiceProvider extends ServiceProvider
             // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/GuardHelpers.php#L81
                 
             Auth::extend($guardName, function ($app, $name) use ($delegate) {
-                // $delegate = $delegate::class;
                 return $delegate;
             });
         
