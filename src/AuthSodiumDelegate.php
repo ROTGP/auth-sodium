@@ -4,6 +4,7 @@ namespace ROTGP\AuthSodium;
 
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Auth\Events\Authenticated;
 use Symfony\Component\HttpFoundation\Response;
 
 use Auth;
@@ -13,6 +14,7 @@ use Exception;
 class AuthSodiumDelegate implements Guard
 {
     protected $user;
+    protected $isMiddleware;
 
     /**
      * Determine if the current user is authenticated.
@@ -44,7 +46,7 @@ class AuthSodiumDelegate implements Guard
     public function user()
     {
         $this->authenticateSignature();
-        return $this->user;
+        return $this->isGuard() ? $this->user : Auth::user();
     }
 
     /**
@@ -79,25 +81,63 @@ class AuthSodiumDelegate implements Guard
      */
     public function setUser(Authenticatable $user)
     {
-        $this->user = $user;
+        if ($this->isGuard()) {
+            $this->user = $user;
+            $this->fireAuthenticatedEvent($user);
+        } else {
+            Auth::setUser($user);
+        }
     }
-
+    
+    /**
+     * Invalidate currently authenticated user.
+     *
+     * @return void
+     */
     public function invalidateUser()
     {
-        $this->user = null;
+        if ($this->isGuard()) {
+            $this->user = null;
+        } else {
+            Auth::invalidateUser();
+        }
     }
 
+    /**
+     * Fire the authenticated event for the guard/user.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @return void
+     */
+    protected function fireAuthenticatedEvent($user)
+    {
+        if ($this->guardName()) {
+            // https://laravel.com/docs/8.x/authentication#events
+            event(new Authenticated(
+                $this->guardName(), $user
+            ));
+        }
+    }
+
+    /**
+     * If there is no user currently authenticated, then
+     * try to authenticate one, based on the current
+     * request. Return whether or not we were able to
+     * authenticate a user.
+     *
+     * @return bool
+     */
     public function authenticateSignature()
     {
         if ($this->user) {
             return true;
         }
-        return $this->validateRequest(request());
+        return $this->validateRequest(request(), false);
     }
 
     public function handle($request, Closure $next)
     {
-        $this->validateRequest($request);
+        $this->validateRequest($request, true);
         
         return $next($request);
     }
@@ -266,6 +306,26 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
+     * Return whether or not we're using a guard.
+     *
+     * @return bool
+     */
+    public function isGuard()
+    {
+        return !empty($this->guardName());
+    }
+
+    /**
+     * Return whether or not we're using a guard.
+     *
+     * @return bool
+     */
+    public function isMiddleware()
+    {
+        return !$this->isGuard();
+    }
+
+    /**
      * Return a string to identify the AuthSodium
      * middleware. Return null if you don't wish to
      * define a dedicated middleware (ie, if using
@@ -406,14 +466,19 @@ class AuthSodiumDelegate implements Guard
 
     protected function abortOnInvalidSignature()
     {
-        return config(
+        return $this->isMiddleware && config(
             'authsodium.middleware.abort_on_invalid_signature',
             true
         );
     }
 
-    public function validateRequest($request)
+    public function validateRequest($request, $isMiddleware)
     {
+        $this->isMiddleware = $isMiddleware;
+        if ($this->user !== null) {
+            return true;
+        }
+
         $user = $this->retrieveUser($request);
         $publicKey = $this->retrievePublicKey($user);
         $signatureToVerify = $this->retrieveSignature($request);
@@ -435,17 +500,9 @@ class AuthSodiumDelegate implements Guard
         }
 
         if ($signatureIsValid) {
-            if ($this->guardName() === null) {
-                Auth::setUser($user);
-            } else {
-                $this->setUser($user);
-            }
+            $this->setUser($user);
         } else {
-            if ($this->guardName() === null) {
-                Auth::invalidateUser();
-            } else {
-                $this->invalidateUser();
-            }
+            $this->invalidateUser();
         }
         
         

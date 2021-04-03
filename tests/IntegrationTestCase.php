@@ -141,6 +141,17 @@ abstract class IntegrationTestCase extends TestCase
         $this->assertNull(Auth::user());
     }
 
+    protected function assertValidationError($response)
+    {
+        $response->assertStatus(422);
+        $this->assertNull(Auth::user());
+    }
+
+    protected function assertInternalServerError($response)
+    {
+        $response->assertStatus(500);
+    }
+
     protected function assertSuccessfulRequest($response)
     {
         $response->assertStatus(200);

@@ -30,8 +30,6 @@ class BaseController extends Controller
 
     protected function errorResponse(int $httpStatusCode = 400, $extras = []) : void
     {
-        // Auth::logout();
-
         $responseData = [
             'http_status_code' => $httpStatusCode,
             'http_status_message' => Response::$statusTexts[$httpStatusCode]
@@ -39,6 +37,22 @@ class BaseController extends Controller
 
         if (sizeof($extras) > 0) {
             $responseData = array_merge($responseData, $extras);
+        }
+
+        abort(response()->json($responseData, $httpStatusCode));
+    }
+
+    protected function validationErrorResponse($errorMessages = []) : void
+    {
+        $httpStatusCode = Response::HTTP_UNPROCESSABLE_ENTITY;
+
+        $responseData = [
+            'http_status_code' => $httpStatusCode,
+            'http_status_message' => Response::$statusTexts[$httpStatusCode]
+        ];
+
+        if (sizeof($errorMessages) > 0) {
+            $errorMessages = array_merge($responseData, $errorMessages);
         }
 
         abort(response()->json($responseData, $httpStatusCode));

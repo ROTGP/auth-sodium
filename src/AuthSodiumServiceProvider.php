@@ -18,10 +18,14 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
-        $this->app->singleton(config('authsodium.delegate'), function ($app) {
-            $delegate = config('authsodium.delegate');
-            return new $delegate;
-        });
+        $delegate = authSodium();
+        // $foo = new $delegate;
+        $this->app->instance(config('authsodium.delegate'), $delegate);
+
+        // $this->app->singleton(config('authsodium.delegate'), function ($app) {
+        //     $delegate = config('authsodium.delegate');
+        //     return new $delegate;
+        // });
 
         $middlewareName = authSodium()->middlewareName();
         $middlewareGroup = authSodium()->middlewareGroup();
@@ -36,7 +40,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * to the beginning of the array.
          */
         if ($usingMiddleware)
-            $kernel->prependToMiddlewarePriority(config('authsodium.delegate'));
+            $kernel->prependToMiddlewarePriority($delegate::class);
 
         /**
          * This will run the middleware ONLY if the
@@ -45,7 +49,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * `Route::resource('foos', FooController::class)->middleware('authsodium');`
          */
         if ($middlewareName !== null)
-            $router->aliasMiddleware($middlewareName, config('authsodium.delegate'));
+            $router->aliasMiddleware($middlewareName, $delegate::class);
         
         /**
          * This adds the AuthSodium middleware to the
@@ -59,7 +63,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * `routes/web.php`
          */
         if ($middlewareGroup !== null)
-            $router->pushMiddlewareToGroup($middlewareGroup, config('authsodium.delegate'));
+            $router->pushMiddlewareToGroup($middlewareGroup, $delegate::class);
 
         /**
          * This will run the AuthSodium middleware on
@@ -69,7 +73,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * user registration).
          */
         if ($useGlobalMiddleware === true)
-            $kernel->pushMiddleware(config('authsodium.delegate'));
+            $kernel->pushMiddleware($delegate::class);
 
         /**
          * Auth::viaRequest is a closure - it will not
@@ -93,9 +97,9 @@ class AuthSodiumServiceProvider extends ServiceProvider
             // https://github.com/laravel/framework/blob/7.x/src/Illuminate/Auth/SessionGuard.php#L823
             // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/GuardHelpers.php#L81
                 
-            Auth::extend($guardName, function ($app, $name) {
-                $delegate = config('authsodium.delegate');
-                return new $delegate;
+            Auth::extend($guardName, function ($app, $name) use ($delegate) {
+                // $delegate = $delegate::class;
+                return $delegate;
             });
         
         /**

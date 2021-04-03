@@ -57,20 +57,27 @@ return [
          * which is essentially an alias. If this is
          * specified, then the Auth facade itself will
          * be remain untouched, and instead you can use
-         * Auth::guard('name'). For example:
+         * Auth::guard('name'). For example, given the
+         * name: 'authsodium'...
          *
-         * - Auth::guard('name')->check() // bool
-         * - Auth::guard('name')->user() // object|null
-         * - Auth::guard('name')->id() //
+         * - Auth::guard('authsodium')->check() // bool
+         * 
+         * - Auth::guard('authsodium')->user() //
+         *   object|null
+         * 
+         * - Auth::guard('authsodium')->id() //
          *   int|string|null
-         * - Auth::guard('name')->guest() // bool
-         * - Auth::guard('name')->authenticateSignature()
+         * 
+         * - Auth::guard('authsodium')->guest() // bool
+         * 
+         * - Auth::guard('authsodium')->authenticateSignature()
          *   // bool
-         * - Auth::guard('name')->invalidateUser() //
-         *   bool
+         * 
+         * - Auth::guard('authsodium')->invalidateUser()
+         *   // bool
          *
          */
-        'name' => 'authsodium',
+        'name' => null
     ],
 
     'middleware' => [
@@ -122,7 +129,6 @@ return [
         'use_global' => false,
 
         /**
-         * @TODO
          * If true, requests will be aborted when the
          * middleware is run and the request is lacking
          * the appropriate auth signature (or associated
