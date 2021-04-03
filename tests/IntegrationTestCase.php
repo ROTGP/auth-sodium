@@ -15,6 +15,8 @@ use Illuminate\Contracts\Http\Kernel;
 
 use Faker\Factory as Faker;
 
+use Event;
+
 abstract class IntegrationTestCase extends TestCase
 {
     use RefreshDatabase;
@@ -33,6 +35,7 @@ abstract class IntegrationTestCase extends TestCase
     private $headers = null;
     private $resource = null;
     private $signed = false;
+    protected $events = [];
 
     /**
      * Setup the test environment.
@@ -43,6 +46,15 @@ abstract class IntegrationTestCase extends TestCase
         $this->loadMigrationsFrom(__DIR__ . '/migrations');
         $this->buildUsers();
         $this->cleanupRequestData();
+        $this->events = [];
+        Event::listen('Illuminate\Auth\Events\*', function ($value, $event) {
+            $this->events[] = $event[0];
+        });
+    }
+
+    protected function dde()
+    {
+        dd($this->events);
     }
 
     protected function cleanupRequestData()

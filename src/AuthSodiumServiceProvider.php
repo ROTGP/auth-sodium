@@ -20,12 +20,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
     {
         $delegate = authSodium();
         // $foo = new $delegate;
-        $this->app->instance(config('authsodium.delegate'), $delegate);
-
-        // $this->app->singleton(config('authsodium.delegate'), function ($app) {
-        //     $delegate = config('authsodium.delegate');
-        //     return new $delegate;
-        // });
+        $this->app->instance($delegate::class, $delegate);
 
         $middlewareName = $delegate->middlewareName();
         $middlewareGroup = $delegate->middlewareGroup();

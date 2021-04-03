@@ -23,14 +23,8 @@ class NamedGuardTest extends IntegrationTestCase
 
     public function test_that_signed_request_to_resource_that_uses_named_guard_succeeds()
     {
-        Event::listen('Illuminate\Auth\Events\*', function ($value, $x) use (&$events) {
-            $events[] = $value;
-        });
-
         $response = $this->signed()->request('post')->response();
-        // dd($response);
         $response->assertStatus(201);
-
-        // dd($events);
+        $this->dde();
     }
 }

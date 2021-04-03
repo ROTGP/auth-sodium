@@ -10,6 +10,12 @@ class FooController extends BaseController
 {
     public function index()
     {
+        // try {
+        //     $foo = Auth::id();
+        // } catch (\Exception $e) {
+        //     dd($e->getMessage());
+        // }
+        // dd('foo', $foo);
         // dd('xxxxx', Auth::guard('authsodium')->user());
         // dd('mk', $id, optional(Auth::guard('authsodium')->user())->toArray());
         return $this->respond(Foo::all());
