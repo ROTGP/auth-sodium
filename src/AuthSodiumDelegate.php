@@ -24,7 +24,7 @@ class AuthSodiumDelegate implements Guard
     public function check()
     {
         $this->authenticateSignature();
-        return ! is_null($this->user);
+        return ! is_null($this->getUser());
     }
 
     /**
@@ -46,6 +46,16 @@ class AuthSodiumDelegate implements Guard
     public function user()
     {
         $this->authenticateSignature();
+        return $this->getUser();
+    }
+
+    /**
+     * Get the currently authenticated user.
+     *
+     * @return \Illuminate\Contracts\Auth\Authenticatable|null
+     */
+    protected function getUser()
+    {
         return $this->isGuard() ? $this->user : Auth::user();
     }
 
@@ -57,8 +67,8 @@ class AuthSodiumDelegate implements Guard
     public function id()
     {
         $this->authenticateSignature();
-        if ($this->user) {
-            return $this->user->getAuthIdentifier();
+        if ($this->getUser()) {
+            return $this->getUser()->getAuthIdentifier();
         }
     }
 
@@ -129,7 +139,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function authenticateSignature()
     {
-        if ($this->user) {
+        if ($this->getUser()) {
             return true;
         }
         return $this->validateRequest(request(), false);
@@ -475,7 +485,7 @@ class AuthSodiumDelegate implements Guard
     public function validateRequest($request, $isMiddleware)
     {
         $this->isMiddleware = $isMiddleware;
-        if ($this->user !== null) {
+        if ($this->getUser() !== null) {
             return true;
         }
 

@@ -25,6 +25,6 @@ class NamedGuardTest extends IntegrationTestCase
     {
         $response = $this->signed()->request('post')->response();
         $response->assertStatus(201);
-        $this->dde();
+        // $this->dde();
     }
 }

@@ -3,8 +3,6 @@ use ROTGP\AuthSodium\Test\IntegrationTestCase;
 
 use ROTGP\AuthSodium\Test\Controllers\FooController;
 
-use Auth;
-
 class GroupMiddlewareTest extends IntegrationTestCase
 {
     protected function customizeSetup()

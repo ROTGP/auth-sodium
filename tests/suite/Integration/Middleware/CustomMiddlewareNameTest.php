@@ -24,7 +24,5 @@ class CustomMiddlewareNameTest extends IntegrationTestCase
     {
         $response = $this->signed()->request()->response();
         $this->assertSuccessfulRequest($response);
-
-        dd('xx', $this->events);
     }
 }
