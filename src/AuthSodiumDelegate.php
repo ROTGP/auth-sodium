@@ -246,7 +246,7 @@ class AuthSodiumDelegate implements Guard
      */
     protected function stringify($array, $sort = true)
     {
-        if ($array === null || sizeof($array) === 0) {
+        if (empty($array)) {
             return '';
         }
 
@@ -429,8 +429,8 @@ class AuthSodiumDelegate implements Guard
     protected function retrievePublicKey($user)
     {
         // @TODO validate public key
-        if ($user === null) {
-            return null;
+        if (!$user) {
+            return;
         }
         $publicKey = $user[$this->userPublicKeyIdentifier()];
         
@@ -454,7 +454,7 @@ class AuthSodiumDelegate implements Guard
         $model::setEventDispatcher($dispatcher);
 
         // @TODO validate that user is not null
-        if ($user === null && $this->abortOnInvalidSignature()) {
+        if (!$user && $this->abortOnInvalidSignature()) {
             $this->errorResponse(null, 400, ['nope' => 'no user found']);
         }
 
@@ -485,7 +485,7 @@ class AuthSodiumDelegate implements Guard
     public function validateRequest($request, $isMiddleware)
     {
         $this->isMiddleware = $isMiddleware;
-        if ($this->getUser() !== null) {
+        if ($this->getUser()) {
             return true;
         }
 
@@ -505,7 +505,7 @@ class AuthSodiumDelegate implements Guard
             );
         }
 
-        if ($signatureIsValid !== true && $this->abortOnInvalidSignature()) {
+        if (!$signatureIsValid && $this->abortOnInvalidSignature()) {
             $this->errorResponse(null, 400, ['nope' => 'invalid signature']);
         }
 
@@ -514,7 +514,6 @@ class AuthSodiumDelegate implements Guard
         } else {
             $this->invalidateUser();
         }
-        
         
         return $signatureIsValid;
     }

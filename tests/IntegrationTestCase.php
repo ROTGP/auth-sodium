@@ -233,10 +233,10 @@ abstract class IntegrationTestCase extends TestCase
     {
         $resource = $this->baseUrl . '/' . $this->url;
         
-        if ($this->resource !== null)
+        if ($this->resource)
             $resource .= '/' . $this->resource;
 
-        if ($withQuery && $this->queryData !== null && sizeof($this->queryData) > 0)
+        if ($withQuery && $this->queryData && sizeof($this->queryData) > 0)
             $resource .= '?' . http_build_query($this->queryData);
             
         return $resource;
@@ -257,7 +257,7 @@ abstract class IntegrationTestCase extends TestCase
     public function getQueryString()
     {
         $query = '';
-        if ($this->queryData !== null && sizeof($this->queryData) > 0) {
+        if (!empty($this->queryData)) {
             $this->queryData = array_change_key_case($this->queryData, CASE_LOWER);
             ksort($this->queryData);
             $this->queryData = array_map(function($value) {
@@ -271,7 +271,7 @@ abstract class IntegrationTestCase extends TestCase
     public function getPostString()
     {
         $post = '';
-        if (in_array($this->method, ['put', 'post']) && $this->postData !== null && sizeof($this->postData) > 0) {
+        if (in_array($this->method, ['put', 'post']) && !empty($this->postData)) {
             $this->postData = array_map(function($value) {
                 return $value === null ? '' : $value;
             }, $this->postData);

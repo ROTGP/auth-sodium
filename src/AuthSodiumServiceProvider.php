@@ -43,7 +43,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          *
          * `Route::resource('foos', FooController::class)->middleware('authsodium');`
          */
-        if ($middlewareName !== null)
+        if ($middlewareName)
             $router->aliasMiddleware($middlewareName, $delegate::class);
         
         /**
@@ -57,7 +57,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * Or of course when the route exists in
          * `routes/web.php`
          */
-        if ($middlewareGroup !== null)
+
+        if ($middlewareGroup)
             $router->pushMiddlewareToGroup($middlewareGroup, $delegate::class);
 
         /**
@@ -67,7 +68,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * soon routes will not need an auth user (ie,
          * user registration).
          */
-        if ($useGlobalMiddleware === true)
+        if ($useGlobalMiddleware)
             $kernel->pushMiddleware($delegate::class);
 
         /**
@@ -81,7 +82,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * is using the authsodium middleware.
          */
         $guardName = authSodium()->guardName();
-        if ($guardName !== null) {
+        if ($guardName) {
             
             config(['auth.guards.' . $guardName => ['driver' => $guardName]]);
             
