@@ -3,6 +3,7 @@
 namespace ROTGP\AuthSodium\Models;
 
 use Illuminate\Database\Eloquent\Model;
+
 use Exception;
 
 class Nonce extends Model
@@ -13,8 +14,12 @@ class Nonce extends Model
      * @var array
      */
     protected $fillable = [
-        'value'
+        'user_id',
+        'value',
+        'timestamp'
     ];
+
+    public $timestamps = false;
 
     public function setUserKey($value)
     {
@@ -25,7 +30,6 @@ class Nonce extends Model
 
     public function authUser()
     {
-        // @TODO authSodium()->authUserModel()
         return $this->belongsTo(config('authsodium.user.model'), $this->foreignKeyName());
     }
 
@@ -34,8 +38,13 @@ class Nonce extends Model
         return authSodium()->authUserModel()->getForeignKey();
     }
 
-    public function scopeForUserKey($query, $value)
+    public function scopeForUserIdentifier($query, $value)
     {
         return $query->where($this->foreignKeyName(), '=', $value);
+    }
+
+    public function scopeBetweenTimestamps($query, $start, $end)
+    {
+        return $query->whereBetween('timestamp', [$start, $end]);
     }
 }

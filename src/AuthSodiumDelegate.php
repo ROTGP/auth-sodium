@@ -4,8 +4,11 @@ namespace ROTGP\AuthSodium;
 
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Auth\Events\Authenticated;
 use Symfony\Component\HttpFoundation\Response;
+
+use ROTGP\AuthSodium\Models\Nonce;
 
 use Auth;
 use Closure;
@@ -202,7 +205,7 @@ class AuthSodiumDelegate implements Guard
      *
      * @return string|int
      */
-    protected function getSignatureNonce($request, $user)
+    protected function getSignatureNonce($request, $user, $validate = true)
     {
         $nonce = $request->header(
             config(
@@ -211,7 +214,9 @@ class AuthSodiumDelegate implements Guard
             )
         );
 
-        $nonce = $this->validateNonce($nonce, $user);
+        if ($validate) {
+            $nonce = $this->validateNonce($nonce, $user);
+        }
         
         return $nonce;
     }
@@ -233,7 +238,21 @@ class AuthSodiumDelegate implements Guard
     protected function validateNonce($value, $user)
     {
         if (!$value) {
-            $this->onValidationError('nonce_missing');
+            $this->onValidationError('nonce_not_found');
+            return null;
+        }
+
+        $leeway = $this->getTimestampLeeway();
+        $start = Carbon::now($this->getAppTimezone())->subtract($leeway, 'seconds');
+        $end = Carbon::now($this->getAppTimezone())->add($leeway, 'seconds');
+        $authIdentifier = $user->getAuthIdentifier();
+
+        $found = Nonce::where('value', $value)
+            ->forUserIdentifier($authIdentifier)
+            ->betweenTimestamps($start->timestamp, $end->timestamp)->first();
+        
+        if ($found) {
+            $this->onValidationError('nonce_already_exists');
             return null;
         }
 
@@ -262,7 +281,7 @@ class AuthSodiumDelegate implements Guard
     protected function validateTimestamp($value)
     {
         if (empty($value)) {
-            $this->onValidationError('timestamp_missing');
+            $this->onValidationError('timestamp_not_found');
             return null;
         }
         
@@ -289,7 +308,7 @@ class AuthSodiumDelegate implements Guard
      *
      * @return int
      */
-    protected function getSignatureTimestamp($request)
+    protected function getSignatureTimestamp($request, $validate = true)
     {
         $value = $request->header(
             config(
@@ -298,8 +317,10 @@ class AuthSodiumDelegate implements Guard
             )
         );
         
-        $value = $this->validateTimestamp($value);
-
+        if ($validate) {
+            $value = $this->validateTimestamp($value);
+        }
+       
         return $value;
     }
 
@@ -651,9 +672,7 @@ class AuthSodiumDelegate implements Guard
             $publicKey
         );
 
-        if ($signatureIsValid) {
-            $this->setUser($user);
-        } else {
+        if (!$signatureIsValid) {
             $this->invalidateUser();
             if ($this->abortOnInvalidSignature()) {
                 $this->errorResponse(
@@ -661,9 +680,21 @@ class AuthSodiumDelegate implements Guard
                     $this->authorizationFailedCode()
                 );
             }
+            return false;
         }
+
+        // save nonce
+        $nonce = $this->getSignatureNonce($request, $user, false);
+        $timestamp = (int) $this->getSignatureTimestamp($request, false);
+        Nonce::create([
+            'user_id' => $user->getAuthIdentifier(),
+            'value' => $nonce,
+            'timestamp' => $timestamp
+        ]);
+
+        $this->setUser($user);
         
-        return $signatureIsValid;
+        return true;
     }
 
     /**
@@ -681,8 +712,18 @@ class AuthSodiumDelegate implements Guard
         if (!class_exists($modelNS)) {
             throw new Exception('Auth sodium model class: "' . $modelNS . '" not found');
         }
+
+        $model = new $modelNS;
+
+        if (!is_a($model, Model::class)) {
+            throw new Exception('Auth sodium model class: "' . $modelNS . '" must extend ' . Model::class);
+        }
+
+        if (!is_a($model, Authenticatable::class)) {
+            throw new Exception('Auth sodium model class: "' . $modelNS . '" must implement ' . Authenticatable::class);
+        }
         
-        return new $modelNS;
+        return $model;
     }
 
     protected function translateErrorMessage($value)

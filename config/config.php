@@ -10,6 +10,16 @@ return [
      */
     'delegate' => ROTGP\AuthSodium\AuthSodiumDelegate::class,
     
+    'nonce' => [
+
+        /**
+         * The length of the nonce for the database
+         * column. By default it's 44, which is 32
+         * base64 encoded bytes.
+         */
+        'length' => 44,
+    ],
+    
 
     'user' => [
         /**
@@ -169,7 +179,9 @@ return [
         'timestamp_not_found' => 0,
         'invalid_timestamp_format' => 0,
         'invalid_timestamp_range' => 0,
-        'unable_to_build_signature_string' => 0
+        'unable_to_build_signature_string' => 0,
+        'nonce_not_found' => 0,
+        'nonce_already_exists' => 0,
     ],
 
     'timestamp' => [
@@ -190,16 +202,4 @@ return [
          */ 
         'leeway' => 300,
     ]
-
-
-
-    /**
-     * @TODO implement customizable error codes
-     *
-     * ie,
-     * 'missing_signature' => 1,
-     * 'user_not_found' => 2,
-     * 'missing_nonce' => 3,
-     * 'nonce_reused' => 4,
-     */
 ];

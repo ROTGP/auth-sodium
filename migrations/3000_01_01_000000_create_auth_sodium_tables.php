@@ -19,9 +19,16 @@ class CreateAuthSodiumTables extends Migration
             $userForeignKey = $userModel->getForeignKey();
             $usersTable = $userModel->getTable();
             $userKeyName = $userModel->getKeyName();
-
+            
             $table->id();
-            $table->string('value', 44); // 32 base64 encoded bytes
+            $table->string('value', config('authsodium.nonce.length', 44));
+            
+            /**
+             * The timestamp for when the request was
+             * made (and the nonce was used), which is
+             * assumed to be in the timezone of
+             */
+            $table->timestamp('timestamp');
 
             // foreign key for user
             $table->unsignedBigInteger($userForeignKey);
@@ -33,7 +40,6 @@ class CreateAuthSodiumTables extends Migration
                 ->onDelete('cascade');
 
             $table->unique(['value', $userForeignKey]);
-            $table->timestamps();
         });
     }
 
