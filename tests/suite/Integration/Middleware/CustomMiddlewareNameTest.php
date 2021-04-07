@@ -17,7 +17,7 @@ class CustomMiddlewareNameTest extends IntegrationTestCase
     public function test_that_unsigned_request_to_resource_protected_by_custom_middleware_name_fails()
     {
         $response = $this->unsigned()->request()->response();
-        $this->assertBadRequest($response);
+        $this->assertValidationError($response, 'signature_not_found');
         $this->assertUserLoggedOut();
     }
 

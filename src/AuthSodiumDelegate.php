@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Auth;
 use Closure;
 use Exception;
+use Carbon\Carbon;
 
 class AuthSodiumDelegate implements Guard
 {
@@ -201,33 +202,105 @@ class AuthSodiumDelegate implements Guard
      *
      * @return string|int
      */
-    protected function getSignatureNonce($request)
+    protected function getSignatureNonce($request, $user)
     {
-        // @TODO validate nonce format, existence, etc
-        return $request->header(
+        $nonce = $request->header(
             config(
                 'authsodium.header_keys.nonce',
                 'Auth-Nonce'
             )
         );
+
+        $nonce = $this->validateNonce($nonce, $user);
+        
+        return $nonce;
+    }
+
+    protected function getTimestampLeeway()
+    {
+        return config('authsodium.timestamp.leeway', 300);
+    }
+
+    protected function getAppTimezone()
+    {
+        return config('app.timezone', 'UTC');
+    }
+
+   /**
+     * Validate the existence, length etc of signature,
+     * not whether it's value is valid;
+     */
+    protected function validateNonce($value, $user)
+    {
+        if (!$value) {
+            $this->onValidationError('nonce_missing');
+            return null;
+        }
+
+        return $value;
     }
 
     /**
-     * Return a UTC-timezone unix timestamp of when the
-     * request was made.
+     * Validate the existence, length etc of signature,
+     * not whether it's value is valid;
+     */
+    protected function validateSignature($value)
+    {
+        if (empty($value)) {
+            $this->onValidationError('signature_not_found');
+            return null;
+        }
+
+        if (strlen($value) !== 64) {
+            $this->onValidationError('signature_invalid_length');
+            return null;
+        }
+
+        return $value;
+    }
+
+    protected function validateTimestamp($value)
+    {
+        if (empty($value)) {
+            $this->onValidationError('timestamp_missing');
+            return null;
+        }
+        
+        if (!ctype_digit($value) || $value > PHP_INT_MAX) {
+            $this->onValidationError('invalid_timestamp_format');
+            return null;
+        }
+
+        $leeway = $this->getTimestampLeeway();
+        $now = Carbon::now($this->getAppTimezone());
+        $requestTimestamp = Carbon::createFromTimestamp($value);
+        $difference = abs($now->diffInSeconds($requestTimestamp));
+        if ($difference > $leeway) {
+            $this->onValidationError('invalid_timestamp_range');
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * Return a unix timestamp of when the request was
+     * made.
      *
      * @return int
      */
     protected function getSignatureTimestamp($request)
     {
-        // @TODO validate timestamp format, existence, etc
-        // and that timestamp falls within acceptable range
-        return $request->header(
+        $value = $request->header(
             config(
                 'authsodium.header_keys.timestamp',
                 'Auth-Timestamp'
             )
         );
+        
+        $value = $this->validateTimestamp($value);
+
+        return $value;
     }
 
     /**
@@ -241,12 +314,19 @@ class AuthSodiumDelegate implements Guard
      */
     protected function getUserIdentifier($request)
     {
-        return $request->header(
+        $uniqueIdentifier = $request->header(
             config(
                 'authsodium.header_keys.user_identifier',
                 'Auth-User'
             )
         );
+
+        if (empty($uniqueIdentifier)) {
+            $this->onValidationError('user_identifier_not_found');
+            return null;
+        }
+
+        return $uniqueIdentifier;
     }
 
     /**
@@ -391,12 +471,20 @@ class AuthSodiumDelegate implements Guard
 
     protected function encode($value)
     {
-        return base64_encode($value);
+        return $this->useBase64() ? base64_encode($value) : bin2hex($value);
     }
 
     protected function decode($value)
     {
-        return base64_decode($value);
+        if (empty($value)) {
+            return $value;
+        }
+        return $this->useBase64() ? base64_decode($value) : hex2bin($value);
+    }
+
+    protected function useBase64()
+    {
+        return config('authsodium.encoding', 'base64');
     }
 
     protected function jsonEncode($value)
@@ -422,30 +510,58 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
+    protected function validationErrorCode()
+    {
+        return config(
+            'authsodium.validation_error_code',
+            422
+        );
+    }
+
+    /**
+     * All the required information was provided, but
+     * the signature verification failed.
+     */
+    protected function authorizationFailedCode()
+    {
+        return config(
+            'authsodium.authorization_failed_http_code',
+            401
+        );
+    }
+
     protected function retrieveSignature($request)
     {
-        $signature = $request->header(
-            config(
-                'authsodium.header_keys.signature',
-                'Auth-Signature'
+        $signature = $this->decode(
+            $request->header(
+                config(
+                    'authsodium.header_keys.signature',
+                    'Auth-Signature'
+                )
             )
         );
 
-        // @TODO validate that not empty or null
-        if (empty($signature) && $this->abortOnInvalidSignature()) {
-            $this->errorResponse(null, 400, ['nope' => 'no signature found']);
+        $signature = $this->validateSignature($signature);
+        if (!$signature) {
+            return null;
         }
 
-        return $this->decode($signature);
+        return $signature;
     }
 
     protected function retrievePublicKey($user)
     {
-        // @TODO validate public key
-        if (!$user) {
-            return;
+        $userPublicKeyIdentifier = $this->userPublicKeyIdentifier();
+        if (empty($userPublicKeyIdentifier)) {
+            $this->onValidationError('user_public_key_identifier_not_found');
+            return null;
         }
-        $publicKey = $user[$this->userPublicKeyIdentifier()];
+
+        $publicKey = $user[$userPublicKeyIdentifier];
+        if (empty($publicKey)) {
+            $this->onValidationError('user_public_key_not_found');
+            return null;
+        }
         
         return $this->decode($publicKey);
     }
@@ -454,8 +570,10 @@ class AuthSodiumDelegate implements Guard
     {
         $model = $this->authUserModel();
         
-        // @TODO validate that $uniqueIdentifier is not null or empty
         $uniqueIdentifier = $this->getUserIdentifier($request);
+        if (empty($uniqueIdentifier)) {
+            return null;
+        }
         
         // https://stackoverflow.com/questions/29407818/is-it-possible-to-temporarily-disable-event-in-laravel/51301753
         $dispatcher = $model::getEventDispatcher();
@@ -466,15 +584,15 @@ class AuthSodiumDelegate implements Guard
 
         $model::setEventDispatcher($dispatcher);
 
-        // @TODO validate that user is not null
-        if (!$user && $this->abortOnInvalidSignature()) {
-            $this->errorResponse(null, 400, ['nope' => 'no user found']);
+        if ($user === null || !$user) {
+            $this->onValidationError('user_not_found');
+            return null;
         }
 
         return $user;
     }
 
-    public function buildSignatureString($request)
+    public function buildSignatureString($request, $user)
     {
         $toSign = [];
         $toSign['method'] = $this->getSignatureMethod($request);
@@ -482,8 +600,13 @@ class AuthSodiumDelegate implements Guard
         $toSign['query_data'] = $this->getSignatureQuery($request);
         $toSign['post_data'] = $this->getSignaturePostdata($request, $toSign['method']);
         $toSign['user_identifier'] = $this->getUserIdentifier($request);
-        $toSign['nonce'] = $this->getSignatureNonce($request);
+        $toSign['nonce'] = $this->getSignatureNonce($request, $user);
         $toSign['timestamp'] = $this->getSignatureTimestamp($request);
+        
+        if (in_array(null, array_values($toSign), true)) {
+            $this->onValidationError('unable_to_build_signature_string');
+            return null;
+        }
         return implode($this->glue(), array_values($toSign));
     }
 
@@ -502,30 +625,42 @@ class AuthSodiumDelegate implements Guard
             return true;
         }
 
-        $user = $this->retrieveUser($request);
-        $publicKey = $this->retrievePublicKey($user);
         $signatureToVerify = $this->retrieveSignature($request);
-        $message = $this->buildSignatureString($request);
-        
-        $signatureIsValid = false;
-       
-        if (!empty($signatureToVerify) && !empty($message) && !empty($publicKey)) {
-            
-            $signatureIsValid = sodium_crypto_sign_verify_detached(
-                $signatureToVerify,
-                $message,
-                $publicKey
-            );
+        if (!$signatureToVerify) {
+            return false;
         }
 
-        if (!$signatureIsValid && $this->abortOnInvalidSignature()) {
-            $this->errorResponse(null, 400, ['nope' => 'invalid signature']);
+        $user = $this->retrieveUser($request);
+        if (!$user) {
+            return false;
         }
+
+        $publicKey = $this->retrievePublicKey($user);
+        if (!$publicKey) {
+            return false;
+        }
+
+        $message = $this->buildSignatureString($request, $user);
+        if (!$message) {
+            return false;
+        }
+        
+        $signatureIsValid = sodium_crypto_sign_verify_detached(
+            $signatureToVerify,
+            $message,
+            $publicKey
+        );
 
         if ($signatureIsValid) {
             $this->setUser($user);
         } else {
             $this->invalidateUser();
+            if ($this->abortOnInvalidSignature()) {
+                $this->errorResponse(
+                    'invalid_signature',
+                    $this->authorizationFailedCode()
+                );
+            }
         }
         
         return $signatureIsValid;
@@ -534,7 +669,6 @@ class AuthSodiumDelegate implements Guard
     /**
      * Return an instance of the user-defined User model.
      *
-     * @return ROTGP\AuthSodium\Models\AuthSodiumUser
      */
     public function authUserModel()
     {
@@ -551,7 +685,28 @@ class AuthSodiumDelegate implements Guard
         return new $modelNS;
     }
 
-    protected function errorResponse($errorCode = null, int $httpStatusCode = 401, $extras = []) : void
+    protected function translateErrorMessage($value)
+    {
+        return ucfirst(strtolower(str_replace('_', ' ', $value)));
+    }
+
+    protected function appendErrorData(&$payload, $error)
+    {
+        $payload['error_key'] = $error;
+        $payload['error_code'] = config('authsodium.error_codes.' . $error, null);
+        $payload['error_message'] = $this->translateErrorMessage($error);
+    }
+
+    protected function onValidationError($errorKey)
+    {
+        // dd($errorKey, $this->abortOnInvalidSignature());
+        if ($this->abortOnInvalidSignature()) {
+            $httpStatusCode = config('authsodium.validation_http_error_code', 422);
+            $this->errorResponse($errorKey, $httpStatusCode);
+        }
+    }
+
+    protected function errorResponse($errorKey, $httpStatusCode = 401, $extras = []) : void
     {
         if (!is_int($httpStatusCode)) {
             throw new Exception('HTTP status code is required');
@@ -565,14 +720,9 @@ class AuthSodiumDelegate implements Guard
             'http_status_code' => $httpStatusCode,
             'http_status_message' => Response::$statusTexts[$httpStatusCode]
         ];
+        $this->appendErrorData($responseData, $errorKey);
 
-        // @TODO implement error codes
-        // if ($errorCode !== null)
-        //     $responseData['error_code'] = $errorCode;
-        // $errorKey = $this->findErrorKey($errorCode);
-        // if ($errorKey !== null)
-        //     $responseData['error_message'] = $this->translateErrorMessage(strtolower($errorKey));
-        if (sizeof($extras) > 0) {
+        if (!empty($extras)) {
             $responseData = array_merge($responseData, $extras);
         }
         abort(response()->json($responseData, $httpStatusCode));

@@ -52,7 +52,7 @@ class BaseController extends Controller
         ];
 
         if (sizeof($errorMessages) > 0) {
-            $errorMessages = array_merge($responseData, $errorMessages);
+            $responseData = array_merge($responseData, $errorMessages);
         }
 
         abort(response()->json($responseData, $httpStatusCode));

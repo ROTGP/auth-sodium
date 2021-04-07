@@ -10,6 +10,27 @@ class FooController extends BaseController
 {
     public function index()
     {
+        // $carbon = now(); //->add(1, 'day');
+
+        // $later = now()->add(38, 'seconds');
+
+        // $diff = $later->diffInSeconds(now());
+        
+        // dd(
+        //     'yasss',
+        //     config('app.timezone'),
+        //     $diff . ' seconds',
+        //     $later->timestamp,
+        //     $carbon->timestamp,
+        //     $carbon->toDateTimeString(),
+        //     // $carbon->timezone,
+        //     $carbon->timezoneName,
+        //     $carbon->utcOffset(),
+        //     $carbon->year,
+        //     $carbon->monthName,
+        //     $carbon->day . ' ' . $carbon->dayName
+        // );
+        
         // try {
         //     $foo = Auth::id();
         // } catch (\Exception $e) {
@@ -23,14 +44,14 @@ class FooController extends BaseController
 
     public function store()
     {
-        // if (!Auth::guard('authsodium')->check())
-        //     $this->errorResponse(400, ['nope' => 'no authorized user']);
+        // dd('here we are', Auth::guard('authsodium')->user());
+        // dd('here we are', Auth::user());
 
         $payload = request()->post();
         $payload['user_id'] = Auth::guard('authsodium')->id();
         
         if ($payload['user_id'] === null)
-            $this->validationErrorResponse(['user_id' => 'user id can not be null']);
+            $this->validationErrorResponse(['error_key' => 'user id can not be null']);
         
         return $this->respond(Foo::create($payload));
     }

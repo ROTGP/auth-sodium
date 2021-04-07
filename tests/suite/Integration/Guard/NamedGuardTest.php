@@ -3,8 +3,6 @@ use ROTGP\AuthSodium\Test\IntegrationTestCase;
 
 use ROTGP\AuthSodium\Test\Controllers\FooController;
 
-use Event;
-
 class NamedGuardTest extends IntegrationTestCase
 {
     protected function customizeSetup()
@@ -30,7 +28,7 @@ class NamedGuardTest extends IntegrationTestCase
     public function test_that_unsigned_request_to_resource_that_uses_named_guard_fails()
     {
         $response = $this->unsigned()->request('post')->response();
-        $this->assertValidationError($response);
+        $this->assertValidationError($response, 'user id can not be null');
         $this->assertUserLoggedOut();
     }
 

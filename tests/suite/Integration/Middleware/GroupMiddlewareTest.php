@@ -17,7 +17,7 @@ class GroupMiddlewareTest extends IntegrationTestCase
     public function test_that_unsigned_request_to_resource_protected_by_group_middleware_fails()
     {
         $response = $this->unsigned()->request()->response();
-        $this->assertBadRequest($response);
+        $this->assertValidationError($response, 'signature_not_found');
         $this->assertUserLoggedOut();
     }
 

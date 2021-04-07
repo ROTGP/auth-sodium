@@ -14,7 +14,7 @@ use Illuminate\Routing\Route;
 use Illuminate\Contracts\Http\Kernel;
 
 use Faker\Factory as Faker;
-
+use Carbon\Carbon;
 use Event;
 
 abstract class IntegrationTestCase extends TestCase
@@ -37,12 +37,16 @@ abstract class IntegrationTestCase extends TestCase
     private $signed = false;
     protected $events = [];
 
+    protected $epoch;
+
     /**
      * Setup the test environment.
      */
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->setTime();
         $this->loadMigrationsFrom(__DIR__ . '/migrations');
         $this->buildUsers();
         $this->cleanupRequestData();
@@ -50,11 +54,22 @@ abstract class IntegrationTestCase extends TestCase
         Event::listen('Illuminate\Auth\Events\*', function ($value, $event) {
             $this->events[] = $event[0];
         });
+        $this->assertUserLoggedOut();
     }
 
-    protected function dde()
+    protected function setTime()
     {
-        dd($this->events);
+        // https://carbon.nesbot.com/docs/#api-testing
+
+        $this->epoch = Carbon::createFromFormat(
+            'd/m/Y H:i:s',
+            '17/03/2021 18:55:20', // St Patrick's Day
+            config('app.timezone') // UTC
+        );
+        Carbon::setTestNow($this->epoch);
+
+        // $this->epoch->setTimezone('Asia/Phnom_Penh');
+        // Carbon::setTestNow($this->epoch);
     }
 
     protected function cleanupRequestData()
@@ -115,9 +130,12 @@ abstract class IntegrationTestCase extends TestCase
         $postData = null,
         $user = null,
         $nonce = 1,
-        $timestamp = 1
+        $timestamp = null
         )
     {
+        if (!$timestamp) {
+            $timestamp = $this->epoch->timestamp;
+        }
         return $this->method($method)
             ->url($url)
             ->queryData($queryData)
@@ -153,10 +171,16 @@ abstract class IntegrationTestCase extends TestCase
         // $this->assertNull(Auth::user());
     }
 
-    protected function assertValidationError($response)
+    protected function assertValidationError($response, $error)
     {
         $response->assertStatus(422);
-        // $this->assertNull(Auth::user());
+        $json = $this->decodeResponse($response);
+        $this->assertArrayHasKey('http_status_code', $json);
+        $this->assertEquals(422, $json['http_status_code']);
+        $this->assertArrayHasKey('http_status_message', $json);
+        $this->assertEquals('Unprocessable Entity', $json['http_status_message']);
+        $this->assertArrayHasKey('error_key', $json);
+        $this->assertEquals($error, $json['error_key']);
     }
 
     protected function assertInternalServerError($response)
@@ -265,8 +289,6 @@ abstract class IntegrationTestCase extends TestCase
         return in_array($this->method, ['put', 'post']) ? $this->postData : [];
     }
 
-    
-
     public function getQueryString()
     {
         $query = '';
@@ -279,6 +301,11 @@ abstract class IntegrationTestCase extends TestCase
             $query = json_encode($this->queryData, JSON_UNESCAPED_UNICODE);
         }
         return $query;
+    }
+
+    public function getTimestamp()
+    {
+        return $this->timestamp;
     }
 
     public function getPostString()
@@ -302,7 +329,7 @@ abstract class IntegrationTestCase extends TestCase
         $params['post'] = $this->getPostString();
         $params['user'] = optional($this->user)['email'] ?? '';
         $params['nonce'] = $this->nonce;
-        $params['timestamp'] = $this->timestamp;
+        $params['timestamp'] = $this->getTimestamp();
         return $params;
     }
 
@@ -324,7 +351,7 @@ abstract class IntegrationTestCase extends TestCase
     {
         return $this->headers ?? [
             'Auth-Nonce' => $this->nonce,
-            'Auth-Timestamp' => $this->timestamp,
+            'Auth-Timestamp' => $this->getTimestamp(),
             'Auth-User' => optional($this->user)['email'] ?? '',
             'Auth-Signature' => $this->getSignature()
         ];

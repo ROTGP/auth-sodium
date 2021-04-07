@@ -151,7 +151,46 @@ return [
          * the browser.
          */
         'log_out_after_request' => false,
+    
+    ],
+
+    'encoding' => 'base64', // or 'hex'
+
+    'validation_http_error_code' => 422, // some people prefer 400
+    'authorization_failed_http_code' => 401,
+
+    'error_codes' => [
+        'user_not_found' => 0,
+        'user_identifier_not_found' => 0,
+        'user_public_key_identifier_not_found' => 0,
+        'user_public_key_not_found' => 0,
+        'invalid_signature' => 0,
+        'signature_not_found' => 0,
+        'timestamp_not_found' => 0,
+        'invalid_timestamp_format' => 0,
+        'invalid_timestamp_range' => 0,
+        'unable_to_build_signature_string' => 0
+    ],
+
+    'timestamp' => [
+        /**
+         * the leeway (in seconds), on either side of
+         * the timestamp, in which to allow valid
+         * timestamps. A leeway of 60 equates to a
+         * request timestamp within one hour (before or
+         * after) of the current system timestamp being
+         * accepted. A value of 2 will result in
+         * timestamps only 2 minutes either side of the
+         * current system time being accepted. The
+         * larger the value, the more forgiving the
+         * service, but this will also result in more
+         * nonces being stored at any given time. This,
+         * however, should not be a concern, as nonce
+         * deletion is managed automatically.
+         */ 
+        'leeway' => 300,
     ]
+
 
 
     /**
