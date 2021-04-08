@@ -164,7 +164,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function terminate($request, $response)
     {
-        if (config('authsodium.middleware.log_out_after_request')) {
+        if (config('authsodium.log_out_after_request', true)) {
             $this->invalidateUser();
         }
     }

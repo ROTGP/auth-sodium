@@ -12,7 +12,7 @@ class DoNotLogoutAfterGuardRequestTest extends IntegrationTestCase
 
         config([
             'authsodium.guard.name' => 'authsodium',
-            'authsodium.middleware.log_out_after_request' => false,
+            'authsodium.log_out_after_request' => false,
             'authsodium.middleware.name' => null
         ]);
     }

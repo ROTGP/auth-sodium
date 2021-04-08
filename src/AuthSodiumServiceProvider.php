@@ -131,7 +131,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
         }
 
         $this->app->terminating(function () use ($delegate) {
-            if (config('authsodium.middleware.log_out_after_request')) {
+            if (config('authsodium.log_out_after_request', true)) {
                 $delegate->invalidateUser();
             }
          });
