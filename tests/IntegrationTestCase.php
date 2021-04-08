@@ -328,8 +328,8 @@ abstract class IntegrationTestCase extends TestCase
         $params['query'] = $this->getQueryString();
         $params['post'] = $this->getPostString();
         $params['user'] = optional($this->user)['email'] ?? '';
-        $params['nonce'] = $this->nonce;
         $params['timestamp'] = $this->getTimestamp();
+        $params['nonce'] = $this->nonce;
         return $params;
     }
 

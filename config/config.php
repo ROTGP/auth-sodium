@@ -10,14 +10,46 @@ return [
      */
     'delegate' => ROTGP\AuthSodium\AuthSodiumDelegate::class,
     
-    'nonce' => [
+    
+    'schema' => [
+
+        'nonce' => [
+
+            /**
+             * The length of the nonce for the database
+             * column. By default it's 44, which is 32
+             * base64 encoded bytes.
+             */
+            'length' => 44,
+        ],
 
         /**
-         * The length of the nonce for the database
-         * column. By default it's 44, which is 32
-         * base64 encoded bytes.
+         * https://stackoverflow.com/a/6876907/1985175
+         * https://crypto.stackexchange.com/a/41173/4557
+         *
+         * If true, then a unique constraint for
+         * user/nonce/timestamp will be created at the
+         * database level, meaning that a nonce can be
+         * reused if it has a different timestamp. A
+         * request with a repeating user/nonce/timestamp
+         * will still be rejected if the timestamp does
+         * not fall within `timestamp.leeway` seconds of
+         * the system time. 
+         *
+         * This allows for more margin or error (random
+         * nonces being repeated), as the nonces must
+         * only be unique within `timestamp.leeway`
+         * seconds of the system time.
+         *
+         * If false, then the unique constraint will be
+         * for the user/nonce, regardless of the
+         * timestamp. So, if user/nonce is repeated
+         * (even if days apart), an exception will
+         * occur. This means that in order to avoid
+         * conflicts, nonces should be cleared regularly
+         * (the default).
          */
-        'length' => 44,
+        'nonce_unique_per_timestamp' => false
     ],
     
 
@@ -161,9 +193,10 @@ return [
     *
     * If true, and your server supports terminating
     * middleware, then Auth::invalidateUser will
-    * explicitly be called after the response has been
+    * be called explicitly after the response has been
     * sent to the browser. An attempt will also be made
-    * via the `$this->app->terminating` method.
+    * via the `$this->app->terminating` method, however,
+    * for long-running processes this is less useful.
     */
     'log_out_after_request' => true,
 

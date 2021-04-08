@@ -21,7 +21,7 @@ class CreateAuthSodiumTables extends Migration
             $userKeyName = $userModel->getKeyName();
             
             $table->id();
-            $table->string('value', config('authsodium.nonce.length', 44));
+            $table->string('value', config('authsodium.schema.nonce.length', 44));
             
             /**
              * The timestamp for when the request was
@@ -38,8 +38,12 @@ class CreateAuthSodiumTables extends Migration
                 ->on($usersTable)
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
-
-            $table->unique(['value', $userForeignKey]);
+            
+            $uniqueConstraints = ['value', $userForeignKey];
+            if (config('authsodium.schema.nonce_unique_per_timestamp', false)) {
+                $uniqueConstraints[] = 'timestamp';
+            }
+            $table->unique($uniqueConstraints);
         });
     }
 

@@ -205,7 +205,7 @@ class AuthSodiumDelegate implements Guard
      *
      * @return string|int
      */
-    protected function getSignatureNonce($request, $user, $validate = true)
+    protected function getSignatureNonce($request, $user, $validate = true, $timestamp = null)
     {
         $nonce = $request->header(
             config(
@@ -215,7 +215,7 @@ class AuthSodiumDelegate implements Guard
         );
 
         if ($validate) {
-            $nonce = $this->validateNonce($nonce, $user);
+            $nonce = $this->validateNonce($nonce, $user, $timestamp);
         }
         
         return $nonce;
@@ -231,14 +231,24 @@ class AuthSodiumDelegate implements Guard
         return config('app.timezone', 'UTC');
     }
 
+    protected function getUniquePerTimestamp()
+    {
+        return config('authsodium.schema.nonce_unique_per_timestamp', false);
+    }
+
    /**
      * Validate the existence, length etc of signature,
      * not whether it's value is valid;
      */
-    protected function validateNonce($value, $user)
+    protected function validateNonce($value, $user, $timestamp)
     {
         if (!$value) {
             $this->onValidationError('nonce_not_found');
+            return null;
+        }
+
+        if (!$timestamp) {
+            $this->onValidationError('timestamp_not_found');
             return null;
         }
 
@@ -247,15 +257,22 @@ class AuthSodiumDelegate implements Guard
         $end = Carbon::now($this->getAppTimezone())->add($leeway, 'seconds');
         $authIdentifier = $user->getAuthIdentifier();
 
-        $found = Nonce::where('value', $value)
-            ->forUserIdentifier($authIdentifier)
-            ->betweenTimestamps($start->timestamp, $end->timestamp)->first();
+        $query = Nonce::forUserIdentifier($authIdentifier)
+            ->where('value', $value);
+
+        if ($this->getUniquePerTimestamp()) {
+            $query->where('timestamp', $timestamp);
+        }
+
+        // dd($query->toSql(), $query->getBindings());
+        
+        $found = $query->first();
         
         if ($found) {
             $this->onValidationError('nonce_already_exists');
             return null;
         }
-
+        
         return $value;
     }
 
@@ -621,8 +638,8 @@ class AuthSodiumDelegate implements Guard
         $toSign['query_data'] = $this->getSignatureQuery($request);
         $toSign['post_data'] = $this->getSignaturePostdata($request, $toSign['method']);
         $toSign['user_identifier'] = $this->getUserIdentifier($request);
-        $toSign['nonce'] = $this->getSignatureNonce($request, $user);
         $toSign['timestamp'] = $this->getSignatureTimestamp($request);
+        $toSign['nonce'] = $this->getSignatureNonce($request, $user, true, $toSign['timestamp']);
         
         if (in_array(null, array_values($toSign), true)) {
             $this->onValidationError('unable_to_build_signature_string');
@@ -684,7 +701,7 @@ class AuthSodiumDelegate implements Guard
         }
 
         // save nonce
-        $nonce = $this->getSignatureNonce($request, $user, false);
+        $nonce = $this->getSignatureNonce($request, $user, false, null);
         $timestamp = (int) $this->getSignatureTimestamp($request, false);
         Nonce::create([
             'user_id' => $user->getAuthIdentifier(),
@@ -740,7 +757,6 @@ class AuthSodiumDelegate implements Guard
 
     protected function onValidationError($errorKey)
     {
-        // dd($errorKey, $this->abortOnInvalidSignature());
         if ($this->abortOnInvalidSignature()) {
             $httpStatusCode = config('authsodium.validation_http_error_code', 422);
             $this->errorResponse($errorKey, $httpStatusCode);
