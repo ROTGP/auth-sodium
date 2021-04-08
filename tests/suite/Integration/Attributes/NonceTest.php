@@ -12,8 +12,6 @@ class NonceTest extends IntegrationTestCase
         $this->router()
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
-
-        config(['authsodium.middleware.log_out_after_request' => true]);
     }
 
     public function test_that_signed_request_with_null_nonce_fails()

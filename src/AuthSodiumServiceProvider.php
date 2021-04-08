@@ -129,6 +129,12 @@ class AuthSodiumServiceProvider extends ServiceProvider
                 __DIR__.'/../config/config.php' => config_path('authsodium.php'),
             ], 'config');
         }
+
+        $this->app->terminating(function () use ($delegate) {
+            if (config('authsodium.middleware.log_out_after_request')) {
+                $delegate->invalidateUser();
+            }
+         });
     }
 
     public function register()

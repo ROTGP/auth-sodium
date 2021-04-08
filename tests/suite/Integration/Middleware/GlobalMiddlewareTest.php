@@ -24,6 +24,6 @@ class GlobalMiddlewareTest extends IntegrationTestCase
     {
         $response = $this->signed()->request()->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedIn();
+        $this->assertUserLoggedOut();
     }
 }

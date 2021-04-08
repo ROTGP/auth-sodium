@@ -37,7 +37,7 @@ class InvalidSignatureTest extends IntegrationTestCase
         $response =  $request->response();
         
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedIn();
+        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_old_timestamp_fails()

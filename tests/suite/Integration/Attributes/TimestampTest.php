@@ -37,7 +37,7 @@ class TimestampTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedIn();
+        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_timestamp_equal_to_positive_leeway_succeeds()
@@ -50,7 +50,7 @@ class TimestampTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedIn();
+        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_timestamp_after_leeway_fails()
@@ -74,7 +74,7 @@ class TimestampTest extends IntegrationTestCase
         $this->assertEquals($stringTimestamp, $this->getTimestamp());
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedIn();
+        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_non_numeric_timestamp_fails()

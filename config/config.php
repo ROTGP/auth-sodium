@@ -156,11 +156,11 @@ return [
          * https://laravel.com/docs/8.x/middleware#terminable-middleware
          *
          * If true, and your server supports terminating
-         * middleware, then Auth::logout will explicitly
+         * middleware, then Auth::invalidateUser will explicitly
          * be called after the response has been sent to
          * the browser.
          */
-        'log_out_after_request' => false,
+        'log_out_after_request' => true,
     
     ],
 
