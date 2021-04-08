@@ -14,33 +14,84 @@ class DoNotPruneTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
 
-        config('authsodium.database.prune_nonces_after_request', false);
+        config(['authsodium.database.prune_nonces_after_request' => false]);
     }
 
-    /**
-     * All requests should fall within a valid
-     * timeframe, and should progress over time.
-     */
-    public function test_that_many_users_with_many_valid_signed_requests_succeed()
+    public function test_that_a_nonces_are_not_pruned_when_making_multiple_requests_over_time()
     {
-        // @TODO
-        // for ($i = 0; $i < 1000; $i++) {
-        //     $request = $this->signed()->request();
-        //     $this->user(self::faker()->randomElement($this->users));
-        //     $this->nonce($i + 1);
-        //     $oneSecondInTheFuture = $this->epoch->add(1, 'second');
-        //     Carbon::setTestNow($oneSecondInTheFuture);
-        //     $response = $request->response();
-        // }
+        $request = $this->signed()->request();
+        $this->nonce('nonce_1');
+        $response = $request->response();
 
-        /**
-         * 300 because they will have been pruned when
-         * more than 300 seconds old.
-         */
-        // $this->assertEquals(Nonce::all()->count(), 300);
-        // $start = Carbon::createFromTimestamp(Nonce::get()->first()->timestamp);
-        // $end = Carbon::createFromTimestamp(Nonce::get()->last()->timestamp);
-        // $timeDiff = $start->diffInSeconds($end);
-        // $this->assertEquals($timeDiff, 299);
+        $this->assertEquals(Nonce::count(), 1);
+        $this->assertEquals(
+            Nonce::pluck('value')->toArray(),
+            ['nonce_1']
+        );
+
+        $fastForward = $this->epoch->copy()->add(299, 'seconds');
+        Carbon::setTestNow($fastForward);
+        $this->timestamp($fastForward->timestamp);
+        $this->nonce('nonce_2');
+        $response = $request->response();
+        $this->assertSuccessfulRequest($response);
+
+        $this->assertEquals(Nonce::count(), 2);
+        $this->assertEquals(
+            Nonce::pluck('value')->toArray(),
+            ['nonce_1', 'nonce_2']
+        );
+
+        $fastForward = $this->epoch->copy()->add(300, 'seconds');
+        Carbon::setTestNow($fastForward);
+        $this->timestamp($fastForward->timestamp);
+        $this->nonce('nonce_3');
+        $response = $request->response();
+        $this->assertSuccessfulRequest($response);
+
+        $this->assertEquals(Nonce::count(), 3);
+        $this->assertEquals(
+            Nonce::pluck('value')->toArray(),
+            ['nonce_1', 'nonce_2', 'nonce_3']
+        );
+
+        $fastForward = $this->epoch->copy()->add(301, 'seconds');
+        Carbon::setTestNow($fastForward);
+        $this->timestamp($fastForward->timestamp);
+        $this->nonce('nonce_4');
+        $response = $request->response();
+        $this->assertSuccessfulRequest($response);
+
+        $this->assertEquals(Nonce::count(), 4);
+        $this->assertEquals(
+            Nonce::pluck('value')->toArray(),
+            ['nonce_1', 'nonce_2', 'nonce_3', 'nonce_4']
+        );
+
+        $fastForward = $this->epoch->copy()->add(600, 'seconds');
+        Carbon::setTestNow($fastForward);
+        $this->timestamp($fastForward->timestamp);
+        $this->nonce('nonce_5');
+        $response = $request->response();
+        $this->assertSuccessfulRequest($response);
+
+        $this->assertEquals(Nonce::count(), 5);
+        $this->assertEquals(
+            Nonce::pluck('value')->toArray(),
+            ['nonce_1', 'nonce_2', 'nonce_3', 'nonce_4', 'nonce_5']
+        );
+
+        $fastForward = $this->epoch->copy()->add(1000, 'seconds');
+        Carbon::setTestNow($fastForward);
+        $this->timestamp($fastForward->timestamp);
+        $this->nonce('nonce_6');
+        $response = $request->response();
+        $this->assertSuccessfulRequest($response);
+
+        $this->assertEquals(Nonce::count(), 6);
+        $this->assertEquals(
+            Nonce::pluck('value')->toArray(),
+            ['nonce_1', 'nonce_2', 'nonce_3', 'nonce_4', 'nonce_5', 'nonce_6']
+        );
     }
 }
