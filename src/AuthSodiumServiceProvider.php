@@ -134,6 +134,10 @@ class AuthSodiumServiceProvider extends ServiceProvider
             if (config('authsodium.log_out_after_request', true)) {
                 $delegate->invalidateUser();
             }
+
+            if (config('authsodium.database.prune_nonces_after_request', true)) {
+                $delegate->pruneNonces();
+            }
          });
     }
 

@@ -10,6 +10,11 @@ return [
      */
     'delegate' => ROTGP\AuthSodium\AuthSodiumDelegate::class,
     
+
+    'database' => [
+
+        'prune_nonces_after_request' => true
+    ],
     
     'schema' => [
 

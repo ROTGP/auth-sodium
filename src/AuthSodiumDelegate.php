@@ -169,6 +169,13 @@ class AuthSodiumDelegate implements Guard
         }
     }
 
+    public function pruneNonces()
+    {
+        $leeway = $this->getTimestampLeeway();
+        $cutoff = Carbon::now($this->getAppTimezone())->subtract($leeway, 'seconds')->timestamp;
+        Nonce::where('timestamp', '<', $cutoff)->delete();
+    }
+
     /**
      * Return the method of the incoming request. Ie,
      * get, put, post or delete. We use lowercase as
