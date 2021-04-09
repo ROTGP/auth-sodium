@@ -88,18 +88,8 @@ abstract class IntegrationTestCase extends TestCase
         $this->signed = false;
     }
 
-    /**
-     * @param \Illuminate\Foundation\Application $app
-     * @return array
-     */
-    protected function getPackageProviders($app)
-    {
-        return ['ROTGP\AuthSodium\AuthSodiumServiceProvider'];
-    }
-
     protected function tearDown(): void
     {
-        // Auth::logout();
         parent::tearDown();
     }
 
@@ -165,10 +155,6 @@ abstract class IntegrationTestCase extends TestCase
         $response->assertStatus(400);
         $json = $this->decodeResponse($response);
         $this->assertArrayHasKey('http_status_code', $json);
-        // $this->assertEquals(400, $json['http_status_code']);
-        // $this->assertArrayHasKey('http_status_message', $json);
-        // $this->assertEquals('Forbidden', $json['http_status_message']);
-        // $this->assertNull(Auth::user());
     }
 
     protected function assertValidationError($response, $error)

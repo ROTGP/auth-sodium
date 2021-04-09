@@ -38,4 +38,13 @@ abstract class TestCase extends OrchestraTestCase
         ]);
         $this->customizeSetup();
     }
+
+    /**
+     * @param \Illuminate\Foundation\Application $app
+     * @return array
+     */
+    protected function getPackageProviders($app)
+    {
+        return ['ROTGP\AuthSodium\AuthSodiumServiceProvider'];
+    }
 }

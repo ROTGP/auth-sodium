@@ -1,8 +1,8 @@
 <?php
-use ROTGP\AuthSodium\Test\IntegrationTestCase;
 
-use ROTGP\AuthSodium\Models\Nonce;
+use ROTGP\AuthSodium\Test\IntegrationTestCase;
 use ROTGP\AuthSodium\Test\Controllers\FooController;
+use ROTGP\AuthSodium\Models\Nonce;
 
 use Carbon\Carbon;
 

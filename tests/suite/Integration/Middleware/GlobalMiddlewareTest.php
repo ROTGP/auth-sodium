@@ -1,6 +1,6 @@
 <?php
-use ROTGP\AuthSodium\Test\IntegrationTestCase;
 
+use ROTGP\AuthSodium\Test\IntegrationTestCase;
 use ROTGP\AuthSodium\Test\Controllers\FooController;
 
 class GlobalMiddlewareTest extends IntegrationTestCase
