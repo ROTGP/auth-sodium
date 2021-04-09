@@ -6,6 +6,8 @@ use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Auth\Events\Authenticated;
+use Illuminate\Support\Facades\Schema;
+
 use Symfony\Component\HttpFoundation\Response;
 
 use ROTGP\AuthSodium\Models\Nonce;
@@ -171,6 +173,9 @@ class AuthSodiumDelegate implements Guard
 
     public function pruneNonces()
     {
+        if (!Schema::hasTable('nonces')) {
+            return;
+        }
         $leeway = $this->getTimestampLeeway();
         $cutoff = Carbon::now($this->getAppTimezone())->subtract($leeway, 'seconds')->timestamp;
         Nonce::where('timestamp', '<', $cutoff)->delete();

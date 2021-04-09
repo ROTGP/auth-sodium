@@ -157,6 +157,16 @@ abstract class IntegrationTestCase extends TestCase
         $this->assertArrayHasKey('http_status_code', $json);
     }
 
+    protected function assertUnauthorized($response)
+    {
+        $response->assertStatus(401);
+        $json = $this->decodeResponse($response);
+        $this->assertArrayHasKey('http_status_code', $json);
+        $this->assertEquals(401, $json['http_status_code']);
+        $this->assertArrayHasKey('http_status_message', $json);
+        $this->assertEquals("Unauthorized", $json['http_status_message']);
+    }
+
     protected function assertValidationError($response, $error)
     {
         $response->assertStatus(422);
