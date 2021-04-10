@@ -624,21 +624,16 @@ class AuthSodiumDelegate implements Guard
         if (empty($uniqueIdentifier)) {
             return null;
         }
-        
-        // https://stackoverflow.com/questions/29407818/is-it-possible-to-temporarily-disable-event-in-laravel/51301753
-        $dispatcher = $model::getEventDispatcher();
 
-        $model::unsetEventDispatcher();
-
-        $user = $model::firstWhere($this->userUniqueIdentifier(), $uniqueIdentifier);
-
-        $model::setEventDispatcher($dispatcher);
+        $user = $model::withoutEvents(function () use ($model, $uniqueIdentifier) {
+            return $model::firstWhere($this->userUniqueIdentifier(), $uniqueIdentifier);
+        });
 
         if ($user === null || !$user) {
             $this->onValidationError('user_not_found');
             return null;
         }
-
+        
         return $user;
     }
 
