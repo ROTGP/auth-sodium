@@ -8,6 +8,7 @@ use Illuminate\Routing\Router;
 
 use Config;
 use Auth;
+use Arr;
 
 class AuthSodiumServiceProvider extends ServiceProvider
 {
@@ -18,7 +19,11 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
-        $delegateNS = config('authsodium.delegate');
+        // if (!defined('AUTH_SODIUM_CONFIG')) {
+        define("AUTH_SODIUM_CONFIG", Arr::dot(config('authsodium')));
+        // }
+
+        $delegateNS = authSodiumConfig('delegate');
         $delegate = app()->make($delegateNS);
         $this->app->instance($delegateNS, $delegate);
 
@@ -131,11 +136,11 @@ class AuthSodiumServiceProvider extends ServiceProvider
         }
 
         $this->app->terminating(function () use ($delegate) {
-            if (config('authsodium.log_out_after_request', true)) {
+            if (authSodiumConfig('log_out_after_request', true)) {
                 $delegate->invalidateUser();
             }
 
-            if (config('authsodium.database.prune_nonces_after_request', true)) {
+            if (authSodiumConfig('database.prune_nonces_after_request', true)) {
                 $delegate->pruneNonces();
             }
          });

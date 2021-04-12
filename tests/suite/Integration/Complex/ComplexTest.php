@@ -21,6 +21,7 @@ class ComplexTest extends IntegrationTestCase
      */
     public function test_that_many_users_with_many_valid_signed_requests_succeed()
     {
+        $this->assertTrue(true);
         for ($i = 0; $i < 1000; $i++) {
             $request = $this->signed()->request();
             $this->user(self::faker()->randomElement($this->users));

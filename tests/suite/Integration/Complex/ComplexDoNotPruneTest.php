@@ -14,7 +14,7 @@ class ComplexDoNotPruneTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
         
-        config('authsodium.database.prune_nonces_after_request', false);
+        config(['authsodium.database.prune_nonces_after_request' => false]);
     }
 
     /**
@@ -32,11 +32,11 @@ class ComplexDoNotPruneTest extends IntegrationTestCase
             $response = $request->response();
         }
 
-        $this->assertEquals(Nonce::all()->count(), 300);
-
+        $this->assertEquals(Nonce::all()->count(), 1000);
+        
         $start = Carbon::createFromTimestamp(Nonce::get()->first()->timestamp);
         $end = Carbon::createFromTimestamp(Nonce::get()->last()->timestamp);
         $timeDiff = $start->diffInSeconds($end);
-        $this->assertEquals($timeDiff, 299);
+        $this->assertEquals($timeDiff, 999);
     }
 }

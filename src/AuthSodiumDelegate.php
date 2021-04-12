@@ -166,8 +166,12 @@ class AuthSodiumDelegate implements Guard
      */
     public function terminate($request, $response)
     {
-        if (config('authsodium.log_out_after_request', true)) {
+        if (authSodiumConfig('log_out_after_request', true)) {
             $this->invalidateUser();
+        }
+
+        if (authSodiumConfig('database.prune_nonces_after_request', true)) {
+            $this->pruneNonces();
         }
     }
 
@@ -235,7 +239,7 @@ class AuthSodiumDelegate implements Guard
 
     protected function getTimestampLeeway()
     {
-        return config('authsodium.timestamp.leeway', 300);
+        return authSodiumConfig('timestamp.leeway', 300);
     }
 
     protected function getAppTimezone()
@@ -245,7 +249,7 @@ class AuthSodiumDelegate implements Guard
 
     protected function getUniquePerTimestamp()
     {
-        return config('authsodium.schema.nonce_unique_per_timestamp', false);
+        return authSodiumConfig('schema.nonce_unique_per_timestamp', false);
     }
 
    /**
@@ -443,7 +447,7 @@ class AuthSodiumDelegate implements Guard
      */
     protected function glue()
     {
-        return config('authsodium.glue', '');
+        return authSodiumConfig('glue', '');
     }
 
 
@@ -455,7 +459,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function guardName()
     {
-        return config('authsodium.guard.name', null);
+        return authSodiumConfig('guard.name', null);
     }
 
     /**
@@ -493,7 +497,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function middlewareName()
     {
-        return config('authsodium.middleware.name', 'authsodium');
+        return authSodiumConfig('middleware.name', 'authsodium');
     }
 
     /**
@@ -504,7 +508,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function middlewareGroup()
     {
-        return config('authsodium.middleware.group', null);
+        return authSodiumConfig('middleware.group', null);
     }
 
     /**
@@ -516,7 +520,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function useGlobalMiddleware()
     {
-        return config('authsodium.middleware.use_global', false);
+        return authSodiumConfig('middleware.use_global', false);
     }
 
     protected function encode($value)
@@ -534,7 +538,7 @@ class AuthSodiumDelegate implements Guard
 
     protected function useBase64()
     {
-        return config('authsodium.encoding', 'base64');
+        return authSodiumConfig('encoding', 'base64');
     }
 
     protected function jsonEncode($value)
@@ -727,7 +731,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function authUserModel()
     {
-        $modelNS = config('authsodium.user.model');
+        $modelNS = authSodiumConfig('user.model');
         
         if (empty($modelNS)) {
             throw new Exception('Auth sodium model not defined');
@@ -758,14 +762,14 @@ class AuthSodiumDelegate implements Guard
     protected function appendErrorData(&$payload, $error)
     {
         $payload['error_key'] = $error;
-        $payload['error_code'] = config('authsodium.error_codes.' . $error, null);
+        $payload['error_code'] = authSodiumConfig('error_codes.' . $error, null);
         $payload['error_message'] = $this->translateErrorMessage($error);
     }
 
     protected function onValidationError($errorKey)
     {
         if ($this->abortOnInvalidSignature()) {
-            $httpStatusCode = config('authsodium.validation_http_error_code', 422);
+            $httpStatusCode = authSodiumConfig('validation_http_error_code', 422);
             $this->errorResponse($errorKey, $httpStatusCode);
         }
     }
