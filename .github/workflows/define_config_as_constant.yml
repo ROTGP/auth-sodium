@@ -3,7 +3,7 @@ name: Tests (define_config_as_constant)
 on:
   push:
     branches:
-      - define_config_as_constant
+      - foo #define_config_as_constant
 
 jobs:
   tests:
