@@ -6,7 +6,7 @@ use ROTGP\AuthSodium\Models\Nonce;
 
 use Carbon\Carbon;
 
-class DoNotPruneTest extends IntegrationTestCase
+class PruneAfterTerminateTest extends IntegrationTestCase
 {
     protected function customizeSetup()
     {
@@ -14,10 +14,13 @@ class DoNotPruneTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
 
-        config(['authsodium.database.prune_nonces_after_request' => false]);
+        config([
+            'authsodium.prune_nonces_after_request' => false,
+            'authsodium.prune_nonces_on_terminate' => true,
+        ]);
     }
 
-    public function test_that_a_nonces_are_not_pruned_when_making_multiple_requests_over_time()
+    public function test_that_nonces_are_pruned_on_application_termination_when_making_requests_over_time()
     {
         $request = $this->signed()->request();
         $this->nonce('nonce_1');
@@ -62,10 +65,10 @@ class DoNotPruneTest extends IntegrationTestCase
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
 
-        $this->assertEquals(Nonce::count(), 4);
+        $this->assertEquals(Nonce::count(), 3);
         $this->assertEquals(
             Nonce::pluck('value')->toArray(),
-            ['nonce_1', 'nonce_2', 'nonce_3', 'nonce_4']
+            ['nonce_2', 'nonce_3', 'nonce_4']
         );
 
         $fastForward = $this->epoch->copy()->add(600, 'seconds');
@@ -75,10 +78,10 @@ class DoNotPruneTest extends IntegrationTestCase
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
 
-        $this->assertEquals(Nonce::count(), 5);
+        $this->assertEquals(Nonce::count(), 3);
         $this->assertEquals(
             Nonce::pluck('value')->toArray(),
-            ['nonce_1', 'nonce_2', 'nonce_3', 'nonce_4', 'nonce_5']
+            ['nonce_3', 'nonce_4', 'nonce_5']
         );
 
         $fastForward = $this->epoch->copy()->add(1000, 'seconds');
@@ -88,10 +91,10 @@ class DoNotPruneTest extends IntegrationTestCase
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
 
-        $this->assertEquals(Nonce::count(), 6);
+        $this->assertEquals(Nonce::count(), 1);
         $this->assertEquals(
             Nonce::pluck('value')->toArray(),
-            ['nonce_1', 'nonce_2', 'nonce_3', 'nonce_4', 'nonce_5', 'nonce_6']
+            ['nonce_6']
         );
     }
 }

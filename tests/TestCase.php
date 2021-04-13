@@ -10,12 +10,14 @@ use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 abstract class TestCase extends OrchestraTestCase
 {
+    // protected $preserveGlobalState = false;
     protected $runTestInSeparateProcess = true;
 
     protected function customizeSetup()
     {
         //
     }
+
     /**
      * Define environment setup.
      *

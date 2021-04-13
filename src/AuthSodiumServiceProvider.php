@@ -19,13 +19,13 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
-        // if (!defined('AUTH_SODIUM_CONFIG')) {
+        \DB::flushQueryLog();
         define("AUTH_SODIUM_CONFIG", Arr::dot(config('authsodium')));
-        // }
-
-        $delegateNS = authSodiumConfig('delegate');
-        $delegate = app()->make($delegateNS);
-        $this->app->instance($delegateNS, $delegate);
+        define("AUTH_SODIUM_TIME_ZONE", config('app.timezone', 'UTC'));
+        
+        $delegateNamespace = authSodiumConfig('delegate');
+        $delegate = authSodium();
+        $this->app->instance($delegateNamespace, $delegate);
 
         $middlewareName = $delegate->middlewareName();
         $middlewareGroup = $delegate->middlewareGroup();
@@ -40,7 +40,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * to the beginning of the array.
          */
         if ($usingMiddleware)
-            $kernel->prependToMiddlewarePriority($delegateNS);
+            $kernel->prependToMiddlewarePriority($delegateNamespace);
 
         /**
          * This will run the middleware ONLY if the
@@ -49,7 +49,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * `Route::resource('foos', FooController::class)->middleware('authsodium');`
          */
         if ($middlewareName)
-            $router->aliasMiddleware($middlewareName, $delegateNS);
+            $router->aliasMiddleware($middlewareName, $delegateNamespace);
         
         /**
          * This adds the AuthSodium middleware to the
@@ -64,7 +64,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */
 
         if ($middlewareGroup)
-            $router->pushMiddlewareToGroup($middlewareGroup, $delegateNS);
+            $router->pushMiddlewareToGroup($middlewareGroup, $delegateNamespace);
 
         /**
          * This will run the AuthSodium middleware on
@@ -74,7 +74,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * user registration).
          */
         if ($useGlobalMiddleware)
-            $kernel->pushMiddleware($delegateNS);
+            $kernel->pushMiddleware($delegateNamespace);
 
         /**
          * Auth::viaRequest is a closure - it will not
@@ -140,9 +140,10 @@ class AuthSodiumServiceProvider extends ServiceProvider
                 $delegate->invalidateUser();
             }
 
-            if (authSodiumConfig('database.prune_nonces_after_request', true)) {
+            if (authSodiumConfig('prune_nonces_on_terminate', true)) {
                 $delegate->pruneNonces();
             }
+            // dd(\DB::getQueryLog());
          });
     }
 

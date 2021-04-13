@@ -170,14 +170,15 @@ class AuthSodiumDelegate implements Guard
             $this->invalidateUser();
         }
 
-        if (authSodiumConfig('database.prune_nonces_after_request', true)) {
+        if (authSodiumConfig('prune_nonces_after_request', true)) {
             $this->pruneNonces();
         }
     }
 
     public function pruneNonces()
     {
-        if (!Schema::hasTable('nonces')) {
+        if (authSodiumConfig('check_nonces_table_before_pruning', true) && 
+            !Schema::hasTable('nonces')) {
             return;
         }
         $leeway = $this->getTimestampLeeway();
@@ -224,8 +225,8 @@ class AuthSodiumDelegate implements Guard
     protected function getSignatureNonce($request, $user, $validate = true, $timestamp = null)
     {
         $nonce = $request->header(
-            config(
-                'authsodium.header_keys.nonce',
+            authSodiumConfig(
+                'header_keys.nonce',
                 'Auth-Nonce'
             )
         );
@@ -244,7 +245,7 @@ class AuthSodiumDelegate implements Guard
 
     protected function getAppTimezone()
     {
-        return config('app.timezone', 'UTC');
+        return AUTH_SODIUM_TIME_ZONE;
     }
 
     protected function getUniquePerTimestamp()
@@ -344,8 +345,8 @@ class AuthSodiumDelegate implements Guard
     protected function getSignatureTimestamp($request, $validate = true)
     {
         $value = $request->header(
-            config(
-                'authsodium.header_keys.timestamp',
+            authSodiumConfig(
+                'header_keys.timestamp',
                 'Auth-Timestamp'
             )
         );
@@ -369,8 +370,8 @@ class AuthSodiumDelegate implements Guard
     protected function getUserIdentifier($request)
     {
         $uniqueIdentifier = $request->header(
-            config(
-                'authsodium.header_keys.user_identifier',
+            authSodiumConfig(
+                'header_keys.user_identifier',
                 'Auth-User'
             )
         );
@@ -549,8 +550,8 @@ class AuthSodiumDelegate implements Guard
     // the field used to uniquely identify the user
     protected function userUniqueIdentifier()
     {
-        return config(
-            'authsodium.user.unique_identifier',
+        return authSodiumConfig(
+            'user.unique_identifier',
             'email'
         );
     }
@@ -558,16 +559,16 @@ class AuthSodiumDelegate implements Guard
     // the field used to uniquely identify the user
     protected function userPublicKeyIdentifier()
     {
-        return config(
-            'authsodium.user.public_key_identifier',
+        return authSodiumConfig(
+            'user.public_key_identifier',
             'public_key'
         );
     }
 
     protected function validationErrorCode()
     {
-        return config(
-            'authsodium.validation_error_code',
+        return authSodiumConfig(
+            'validation_error_code',
             422
         );
     }
@@ -578,8 +579,8 @@ class AuthSodiumDelegate implements Guard
      */
     protected function authorizationFailedCode()
     {
-        return config(
-            'authsodium.authorization_failed_http_code',
+        return authSodiumConfig(
+            'authorization_failed_http_code',
             401
         );
     }
@@ -588,8 +589,8 @@ class AuthSodiumDelegate implements Guard
     {
         $signature = $this->decode(
             $request->header(
-                config(
-                    'authsodium.header_keys.signature',
+                authSodiumConfig(
+                    'header_keys.signature',
                     'Auth-Signature'
                 )
             )
@@ -661,14 +662,15 @@ class AuthSodiumDelegate implements Guard
 
     protected function abortOnInvalidSignature()
     {
-        return $this->isMiddleware && config(
-            'authsodium.middleware.abort_on_invalid_signature',
+        return $this->isMiddleware && authSodiumConfig(
+            'middleware.abort_on_invalid_signature',
             true
         );
     }
 
     public function validateRequest($request, $isMiddleware)
     {
+        \DB::enableQueryLog();
         $this->isMiddleware = $isMiddleware;
         if ($this->getUser()) {
             return true;

@@ -5,7 +5,7 @@ use ROTGP\AuthSodium\Test\Controllers\FooController;
 
 use Carbon\Carbon;
 
-class HeaderTest extends IntegrationTestCase
+class HeadersTest extends IntegrationTestCase
 {
     protected function customizeSetup()
     {

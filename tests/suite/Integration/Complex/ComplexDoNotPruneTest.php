@@ -14,7 +14,7 @@ class ComplexDoNotPruneTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
         
-        config(['authsodium.database.prune_nonces_after_request' => false]);
+        config(['authsodium.prune_nonces_after_request' => false]);
     }
 
     /**

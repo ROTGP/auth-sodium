@@ -10,12 +10,6 @@ return [
      */
     'delegate' => ROTGP\AuthSodium\AuthSodiumDelegate::class,
     
-
-    'database' => [
-
-        'prune_nonces_after_request' => true
-    ],
-    
     'schema' => [
 
         'nonce' => [
@@ -208,6 +202,31 @@ return [
     * for long-running processes this is less useful.
     */
     'log_out_after_request' => true,
+
+
+    /**
+     * Check that the nonce table exists before pruning.
+     * It may not exist in some cases (such as on
+     * terminating the application and before migrations
+     * have been performed). If you're sure the nonces
+     * tables exists, then set to false for a slight
+     * performance optimization.
+     */
+    'check_nonces_table_before_pruning' => true,
+
+    /**
+     * Prune nonces on terminating a request (via
+     * middleware). As per log_out_after_request, this
+     * will only apply if using middleware, and the
+     * server supports it.
+     */
+    'prune_nonces_after_request' => true,
+
+    /**
+     * Prune nonces when the application terminates.
+     * This also includes when run via the cli.
+     */
+    'prune_nonces_on_terminate' => false,
 
     'encoding' => 'base64', // or 'hex'
 

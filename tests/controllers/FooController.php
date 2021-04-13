@@ -10,35 +10,6 @@ class FooController extends BaseController
 {
     public function index()
     {
-        // $carbon = now(); //->add(1, 'day');
-
-        // $later = now()->add(38, 'seconds');
-
-        // $diff = $later->diffInSeconds(now());
-        
-        // dd(
-        //     'yasss',
-        //     config('app.timezone'),
-        //     $diff . ' seconds',
-        //     $later->timestamp,
-        //     $carbon->timestamp,
-        //     $carbon->toDateTimeString(),
-        //     // $carbon->timezone,
-        //     $carbon->timezoneName,
-        //     $carbon->utcOffset(),
-        //     $carbon->year,
-        //     $carbon->monthName,
-        //     $carbon->day . ' ' . $carbon->dayName
-        // );
-        
-        // try {
-        //     $foo = Auth::id();
-        // } catch (\Exception $e) {
-        //     dd($e->getMessage());
-        // }
-        // dd('foo', $foo);
-        // dd('xxxxx', Auth::guard('authsodium')->user());
-        // dd('mk', $id, optional(Auth::guard('authsodium')->user())->toArray());
         return $this->respond(Foo::all());
     }
 

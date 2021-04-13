@@ -64,7 +64,7 @@ abstract class IntegrationTestCase extends TestCase
         $this->epoch = Carbon::createFromFormat(
             'd/m/Y H:i:s',
             '17/03/2021 18:55:20', // St Patrick's Day
-            config('app.timezone') // UTC
+            'UTC'
         );
         Carbon::setTestNow($this->epoch);
 
