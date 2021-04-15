@@ -51,13 +51,4 @@ abstract class TestCase extends OrchestraTestCase
     {
         return ['ROTGP\AuthSodium\AuthSodiumServiceProvider'];
     }
-
-    /**
-     * @param \Illuminate\Foundation\Application $app
-     * @return array
-     */
-    protected function getPackageAliases($app)
-    {
-        return ['AuthSodium' => 'ROTGP\AuthSodium\Facades\AuthSodium'];
-    }
 }

@@ -36,7 +36,7 @@ class Nonce extends Model
 
     public function foreignKeyName()
     {
-        return AuthSodium::authUserModel()->getForeignKey();
+        return authSodium()->authUserModel()->getForeignKey();
     }
 
     public function scopeForUserIdentifier($query, $value)

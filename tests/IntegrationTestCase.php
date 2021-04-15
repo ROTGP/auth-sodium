@@ -238,17 +238,12 @@ abstract class IntegrationTestCase extends TestCase
         if (!$user) {
             $user = $this->users[0]['model'];
         }
-        $this->assertTrue($user->is($this->authSodium()->getUser()));
+        $this->assertTrue($user->is(authSodium()->getUser()));
     }
 
     protected function assertUserLoggedOut()
     {
-        $this->assertNull($this->authSodium()->getUser());
-    }
-
-    protected function authSodium()
-    {
-        return app()->make(config('authsodium.delegate'));
+        $this->assertNull(authSodium()->getUser());
     }
 
     protected function assertAssociativeArray($value)

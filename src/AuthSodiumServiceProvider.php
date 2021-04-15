@@ -21,14 +21,9 @@ class AuthSodiumServiceProvider extends ServiceProvider
         \DB::flushQueryLog();
         
         $delegateNamespace = config('authsodium.delegate');
-        $delegate = $this->app->make(config('authsodium.delegate'));
+        $delegate = authSodium();
         
         $this->app->instance($delegateNamespace, $delegate);
-        $this->app->bind('authsodium', $delegateNamespace);
-        
-        // $this->app->bind('authsodium', function($app) use ($delegate) {
-        //     return $delegate;
-        // });
 
         $middlewareName = $delegate->middlewareName();
         $middlewareGroup = $delegate->middlewareGroup();
@@ -102,7 +97,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
             // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/GuardHelpers.php#L81
                 
             Auth::extend($guardName, function ($app, $name) use ($delegate) {
-                return $this->app->make(config('authsodium.delegate'));
+                return authSodium();
                 // return $delegate;
             });
         
@@ -114,7 +109,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
         } else {
 
             Auth::macro('authenticateSignature', function () use ($delegate) {
-                return $this->app->make(config('authsodium.delegate'))->authenticateSignature();
+                return authSodium()->authenticateSignature();
             });
     
             Auth::macro('invalidateUser', function () {
@@ -141,11 +136,11 @@ class AuthSodiumServiceProvider extends ServiceProvider
 
         $this->app->terminating(function () use ($delegate) {
             if (config('authsodium.log_out_after_request', true)) {
-                $this->app->make(config('authsodium.delegate'))->invalidateUser();
+                authSodium()->invalidateUser();
             }
 
             if (config('authsodium.prune_nonces_on_terminate', true)) {
-                $this->app->make(config('authsodium.delegate'))->pruneNonces();
+                authSodium()->pruneNonces();
             }
             // dd(\DB::getQueryLog());
          });

@@ -11,8 +11,6 @@ class FooController extends BaseController
 {
     public function index()
     {
-        // echo AuthSodium::foo('bananas');
-        
         return $this->respond(Foo::all());
     }
 
