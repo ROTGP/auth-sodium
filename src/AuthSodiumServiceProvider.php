@@ -8,7 +8,6 @@ use Illuminate\Routing\Router;
 
 use Config;
 use Auth;
-use Arr;
 
 class AuthSodiumServiceProvider extends ServiceProvider
 {
@@ -20,12 +19,16 @@ class AuthSodiumServiceProvider extends ServiceProvider
     public function boot(Router $router, Kernel $kernel)
     {
         \DB::flushQueryLog();
-        define("AUTH_SODIUM_CONFIG", Arr::dot(config('authsodium')));
-        define("AUTH_SODIUM_TIME_ZONE", config('app.timezone', 'UTC'));
         
-        $delegateNamespace = authSodiumConfig('delegate');
-        $delegate = authSodium();
+        $delegateNamespace = config('authsodium.delegate');
+        $delegate = $this->app->make(config('authsodium.delegate'));
+        
         $this->app->instance($delegateNamespace, $delegate);
+        $this->app->bind('authsodium', $delegateNamespace);
+        
+        // $this->app->bind('authsodium', function($app) use ($delegate) {
+        //     return $delegate;
+        // });
 
         $middlewareName = $delegate->middlewareName();
         $middlewareGroup = $delegate->middlewareGroup();
@@ -86,7 +89,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * It will NOT get called just because a route
          * is using the authsodium middleware.
          */
-        $guardName = authSodium()->guardName();
+        $guardName = $delegate->guardName();
         if ($guardName) {
             
             config(['auth.guards.' . $guardName => ['driver' => $guardName]]);
@@ -99,7 +102,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
             // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/GuardHelpers.php#L81
                 
             Auth::extend($guardName, function ($app, $name) use ($delegate) {
-                return $delegate;
+                return $this->app->make(config('authsodium.delegate'));
+                // return $delegate;
             });
         
         /**
@@ -109,8 +113,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */ 
         } else {
 
-            Auth::macro('authenticateSignature', function () {
-                return authSodium()->authenticateSignature();
+            Auth::macro('authenticateSignature', function () use ($delegate) {
+                return $this->app->make(config('authsodium.delegate'))->authenticateSignature();
             });
     
             Auth::macro('invalidateUser', function () {
@@ -136,12 +140,12 @@ class AuthSodiumServiceProvider extends ServiceProvider
         }
 
         $this->app->terminating(function () use ($delegate) {
-            if (authSodiumConfig('log_out_after_request', true)) {
-                $delegate->invalidateUser();
+            if (config('authsodium.log_out_after_request', true)) {
+                $this->app->make(config('authsodium.delegate'))->invalidateUser();
             }
 
-            if (authSodiumConfig('prune_nonces_on_terminate', true)) {
-                $delegate->pruneNonces();
+            if (config('authsodium.prune_nonces_on_terminate', true)) {
+                $this->app->make(config('authsodium.delegate'))->pruneNonces();
             }
             // dd(\DB::getQueryLog());
          });

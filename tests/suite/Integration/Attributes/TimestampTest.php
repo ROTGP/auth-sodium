@@ -17,11 +17,8 @@ class TimestampTest extends IntegrationTestCase
     public function test_that_signed_request_with_timestamp_before_leeway_fails()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->getTimestamp()
-            )->subtract(301, 'seconds')->timestamp
-        );
+        $newDate = $this->epoch->copy()->subtract(300001, 'milliseconds');
+        $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
         $this->assertUserLoggedOut();
@@ -30,11 +27,8 @@ class TimestampTest extends IntegrationTestCase
     public function test_that_signed_request_with_timestamp_equal_to_negative_leeway_succeeds()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->subtract(300, 'seconds')->timestamp
-        );
+        $newDate = $this->epoch->copy()->subtract(300000, 'milliseconds');
+        $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserLoggedOut();
@@ -43,11 +37,8 @@ class TimestampTest extends IntegrationTestCase
     public function test_that_signed_request_with_timestamp_equal_to_positive_leeway_succeeds()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->add(300, 'seconds')->timestamp
-        );
+        $newDate = $this->epoch->copy()->subtract(300000, 'milliseconds');
+        $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserLoggedOut();
@@ -59,7 +50,7 @@ class TimestampTest extends IntegrationTestCase
         $this->timestamp(
             Carbon::createFromTimestamp(
                 $this->epoch->copy()->timestamp
-            )->add(301, 'seconds')->timestamp
+            )->add(300001, 'milliseconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
@@ -69,9 +60,10 @@ class TimestampTest extends IntegrationTestCase
     public function test_that_signed_request_with_numeric_string_timestamp_succeeds()
     {
         $request = $this->signed()->request();
-        $stringTimestamp = (string) $this->epoch->timestamp;
+        $stringTimestamp = (string) intval($this->epoch->getPreciseTimestamp(3));
         $this->timestamp($stringTimestamp);
         $this->assertEquals($stringTimestamp, $this->getTimestamp());
+        $this->assertEquals('1616007320000', $stringTimestamp);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserLoggedOut();
@@ -119,17 +111,14 @@ class TimestampTest extends IntegrationTestCase
         $this->timestamp(
             Carbon::createFromTimestamp(
                 $this->epoch->copy()->timestamp
-            )->subtract(301, 'seconds')->timestamp
+            )->subtract(300001, 'milliseconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
         $this->assertUserLoggedOut();
 
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->subtract(300, 'seconds')->timestamp
-        );
+        $newDate = $this->epoch->copy()->subtract(300000, 'milliseconds');
+        $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserLoggedOut();
@@ -141,17 +130,14 @@ class TimestampTest extends IntegrationTestCase
         $this->timestamp(
             Carbon::createFromTimestamp(
                 $this->epoch->copy()->timestamp
-            )->add(301, 'seconds')->timestamp
+            )->add(300001, 'milliseconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
         $this->assertUserLoggedOut();
 
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->add(300, 'seconds')->timestamp
-        );
+        $newDate = $this->epoch->copy()->add(300000, 'milliseconds');
+        $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserLoggedOut();

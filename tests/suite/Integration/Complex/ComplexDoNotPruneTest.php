@@ -37,6 +37,6 @@ class ComplexDoNotPruneTest extends IntegrationTestCase
         $start = Carbon::createFromTimestamp(Nonce::get()->first()->timestamp);
         $end = Carbon::createFromTimestamp(Nonce::get()->last()->timestamp);
         $timeDiff = $start->diffInSeconds($end);
-        $this->assertEquals($timeDiff, 999);
+        $this->assertEquals($timeDiff, 999000);
     }
 }

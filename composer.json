@@ -9,9 +9,6 @@
         },
         "classmap": [
             "src"
-        ],
-        "files": [
-            "src/helpers.php"
         ]
     },
     "autoload-dev": {
@@ -31,7 +28,10 @@
         "laravel": {
             "providers": [
                 "ROTGP\\AuthSodium\\AuthSodiumServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "AuthSodium": "ROTGP\\AuthSodium\\Facades\\AuthSodium"
+            }
         }
     }
 }

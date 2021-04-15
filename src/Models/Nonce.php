@@ -5,6 +5,7 @@ namespace ROTGP\AuthSodium\Models;
 use Illuminate\Database\Eloquent\Model;
 
 use Exception;
+use AuthSodium;
 
 class Nonce extends Model
 {  
@@ -30,12 +31,12 @@ class Nonce extends Model
 
     public function authUser()
     {
-        return $this->belongsTo(authSodiumConfig('user.model'), $this->foreignKeyName());
+        return $this->belongsTo(config('authsodium.user.model'), $this->foreignKeyName());
     }
 
     public function foreignKeyName()
     {
-        return authSodium()->authUserModel()->getForeignKey();
+        return AuthSodium::authUserModel()->getForeignKey();
     }
 
     public function scopeForUserIdentifier($query, $value)

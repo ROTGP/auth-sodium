@@ -11,7 +11,7 @@ use Orchestra\Testbench\TestCase as OrchestraTestCase;
 abstract class TestCase extends OrchestraTestCase
 {
     // protected $preserveGlobalState = false;
-    protected $runTestInSeparateProcess = true;
+    // protected $runTestInSeparateProcess = true;
 
     protected function customizeSetup()
     {
@@ -50,5 +50,14 @@ abstract class TestCase extends OrchestraTestCase
     protected function getPackageProviders($app)
     {
         return ['ROTGP\AuthSodium\AuthSodiumServiceProvider'];
+    }
+
+    /**
+     * @param \Illuminate\Foundation\Application $app
+     * @return array
+     */
+    protected function getPackageAliases($app)
+    {
+        return ['AuthSodium' => 'ROTGP\AuthSodium\Facades\AuthSodium'];
     }
 }

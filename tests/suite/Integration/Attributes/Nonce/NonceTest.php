@@ -129,9 +129,8 @@ class NonceTest extends IntegrationTestCase
         $this->assertValidationError($response, 'nonce_already_exists');
         $this->assertUserLoggedOut();
 
-        $oneSecondInTheFuture = $this->epoch->add(1, 'second');
-        Carbon::setTestNow($oneSecondInTheFuture);
-        $this->timestamp($oneSecondInTheFuture->timestamp);
+        $oneSecondInTheFuture = $this->epoch->add(1, 'millisecond');
+        $this->setTestNow($oneSecondInTheFuture);
         $response = $request->response();
         $this->assertValidationError($response, 'nonce_already_exists');
         $this->assertUserLoggedOut();

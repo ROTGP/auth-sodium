@@ -39,6 +39,6 @@ class ComplexTest extends IntegrationTestCase
         $start = Carbon::createFromTimestamp(Nonce::get()->first()->timestamp);
         $end = Carbon::createFromTimestamp(Nonce::get()->last()->timestamp);
         $timeDiff = $start->diffInSeconds($end);
-        $this->assertEquals($timeDiff, 299);
+        $this->assertEquals($timeDiff, 299000);
     }
 }

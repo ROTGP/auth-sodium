@@ -29,8 +29,7 @@ class NonceUniquePerTimestampTest extends IntegrationTestCase
         $this->assertUserLoggedOut();
 
         $oneSecondInTheFuture = $this->epoch->add(1, 'second');
-        Carbon::setTestNow($oneSecondInTheFuture);
-        $this->timestamp($oneSecondInTheFuture->timestamp);
+        $this->setTestNow($oneSecondInTheFuture);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserLoggedOut();

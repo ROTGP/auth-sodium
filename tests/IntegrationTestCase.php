@@ -16,6 +16,8 @@ use Illuminate\Contracts\Http\Kernel;
 use Faker\Factory as Faker;
 use Carbon\Carbon;
 use Event;
+use AuthSodium;
+use Mockery\MockInterface;
 
 abstract class IntegrationTestCase extends TestCase
 {
@@ -39,6 +41,8 @@ abstract class IntegrationTestCase extends TestCase
 
     protected $epoch;
 
+    protected $mock;
+
     /**
      * Setup the test environment.
      */
@@ -55,21 +59,57 @@ abstract class IntegrationTestCase extends TestCase
             $this->events[] = $event[0];
         });
         $this->assertUserLoggedOut();
+
+        $this->resetMock();
+        $this->mockTime();
+    }
+
+    protected function resetMock()
+    {
+        $this->mock = $this->partialMock(config('authsodium.delegate'), function (MockInterface $mock) {
+            return $mock;
+        });
+        return $this->mock;
+    }
+
+    protected function mockTime()
+    {
+        $getSystemTime = function() {
+            return config('authsodium.timestamp.use_milliseconds', true) ? 
+                intval(Carbon::now()->getPreciseTimestamp(3)) : 
+                Carbon::now()->getTimestamp();
+        };
+        
+        $this->mock->shouldReceive('getSystemTime')->andReturnUsing($getSystemTime);
     }
 
     protected function setTime()
     {
-        // https://carbon.nesbot.com/docs/#api-testing
-
         $this->epoch = Carbon::createFromFormat(
             'd/m/Y H:i:s',
             '17/03/2021 18:55:20', // St Patrick's Day
             'UTC'
         );
         Carbon::setTestNow($this->epoch);
+    }
 
-        // $this->epoch->setTimezone('Asia/Phnom_Penh');
-        // Carbon::setTestNow($this->epoch);
+    protected function setTestNow($value, $updateTimestamp = true)
+    {
+        Carbon::setTestNow($value);
+        $this->timestamp(Carbon::getTestNow()->timestamp);
+        
+        if ($updateTimestamp) {
+            $this->setTimestampFromDate($value);
+        }
+    }
+
+    protected function setTimestampFromDate($value)
+    {
+        if (config('authsodium.timestamp.use_milliseconds', true)) {
+            $this->timestamp(intval($value->getPreciseTimestamp(3)));
+        }  else {
+            $this->timestamp($value->getTimestamp());
+        }
     }
 
     protected function cleanupRequestData()
@@ -124,7 +164,7 @@ abstract class IntegrationTestCase extends TestCase
         )
     {
         if (!$timestamp) {
-            $timestamp = $this->epoch->timestamp;
+            $timestamp = intval($this->epoch->getPreciseTimestamp(3));
         }
         return $this->method($method)
             ->url($url)
@@ -198,12 +238,17 @@ abstract class IntegrationTestCase extends TestCase
         if (!$user) {
             $user = $this->users[0]['model'];
         }
-        $this->assertTrue($user->is(authSodium()->getUser()));
+        $this->assertTrue($user->is($this->authSodium()->getUser()));
     }
 
     protected function assertUserLoggedOut()
     {
-        $this->assertNull(authSodium()->getUser());
+        $this->assertNull($this->authSodium()->getUser());
+    }
+
+    protected function authSodium()
+    {
+        return app()->make(config('authsodium.delegate'));
     }
 
     protected function assertAssociativeArray($value)

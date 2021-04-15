@@ -5,11 +5,14 @@ namespace ROTGP\AuthSodium\Test\Controllers;
 use ROTGP\AuthSodium\Test\Models\Foo;
 
 use Auth;
+use AuthSodium;
 
 class FooController extends BaseController
 {
     public function index()
     {
+        // echo AuthSodium::foo('bananas');
+        
         return $this->respond(Foo::all());
     }
 
@@ -20,7 +23,7 @@ class FooController extends BaseController
 
         $payload = request()->post();
         $payload['user_id'] = Auth::guard('authsodium')->id();
-        
+                
         if ($payload['user_id'] === null)
             $this->validationErrorResponse(['error_key' => 'user id can not be null']);
         

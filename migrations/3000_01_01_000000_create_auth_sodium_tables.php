@@ -13,22 +13,31 @@ class CreateAuthSodiumTables extends Migration
      */
     public function up()
     {
+        // @TODO
+        // if (strlen((string) PHP_INT_MAX) < 19 && config('authsodium.use_milliseconds', true) === true) {
+        //     // Looks like we're running on a 32-bit build of PHP.  This could cause problems because some of the numbers
+        //     // we use (file sizes, quota, etc) can be larger than 32-bit ints can handle.
+        //     throw new \Exception("The Dropbox SDK uses 64-bit integers, but it looks like we're running on a version of PHP that doesn't support 64-bit integers (PHP_INT_MAX=" . ((string) PHP_INT_MAX) . ").  Library: \"" . __FILE__ . "\"");
+        // }
+
         Schema::create('nonces', function (Blueprint $table) {  
 
-            $userModel = authSodium()->authUserModel();
+            $userModel = AuthSodium::authUserModel();
             $userForeignKey = $userModel->getForeignKey();
             $usersTable = $userModel->getTable();
             $userKeyName = $userModel->getKeyName();
             
             $table->id();
-            $table->string('value', authSodiumConfig('schema.nonce.length', 44));
+            $table->string('value', config('authsodium.schema.nonce.length', 44));
             
             /**
              * The timestamp for when the request was
              * made (and the nonce was used), which is
              * assumed to be in the timezone of
              */
-            $table->timestamp('timestamp');
+            // $table->timestamp('timestamp');
+            // @TODO $table->bigInteger
+            $table->unsignedBigInteger('timestamp');
 
             // foreign key for user
             $table->unsignedBigInteger($userForeignKey);
@@ -40,7 +49,7 @@ class CreateAuthSodiumTables extends Migration
                 ->onDelete('cascade');
             
             $uniqueConstraints = ['value', $userForeignKey];
-            if (authSodiumConfig('schema.nonce_unique_per_timestamp', false)) {
+            if (config('authsodium.schema.nonce_unique_per_timestamp', false)) {
                 $uniqueConstraints[] = 'timestamp';
             }
             $table->unique($uniqueConstraints);

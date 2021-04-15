@@ -233,6 +233,37 @@ return [
     'validation_http_error_code' => 422, // some people prefer 400
     'authorization_failed_http_code' => 401,
 
+    'timestamp' => [
+        
+        /**
+         * Whether to use milliseconds (true) or seconds
+         * (false) when dealing with timestamps. The
+         * dicates what the end-user should send, and
+         * also what to expect interally when validating
+         * timestamps, and deleting them.
+         */
+        'use_milliseconds' => true,
+
+        /**
+         * The leeway (in seconds, or milliseconds,
+         * depending on the value of
+         * `use_milliseconds`), on either side of the
+         * timestamp, in which to allow valid
+         * timestamps. A leeway of 300000 milliseconds
+         * (the default) equates to a request timestamp
+         * within 5 minutes (before or after) the
+         * current system timestamp being accepted. The
+         * larger the value, the more forgiving the
+         * service, but this will also result in more
+         * nonces being stored at any given time. This,
+         * however, should not be a concern, as nonce
+         * deletion is managed automatically.
+         * 
+         * 300000 milliseconds = 300 seconds = 5 minutes
+         */ 
+        'leeway' => 300000
+    ],
+
     'error_codes' => [
         'user_not_found' => 0,
         'user_identifier_not_found' => 0,
@@ -247,23 +278,4 @@ return [
         'nonce_not_found' => 0,
         'nonce_already_exists' => 0,
     ],
-
-    'timestamp' => [
-        /**
-         * the leeway (in seconds), on either side of
-         * the timestamp, in which to allow valid
-         * timestamps. A leeway of 60 equates to a
-         * request timestamp within one hour (before or
-         * after) of the current system timestamp being
-         * accepted. A value of 2 will result in
-         * timestamps only 2 minutes either side of the
-         * current system time being accepted. The
-         * larger the value, the more forgiving the
-         * service, but this will also result in more
-         * nonces being stored at any given time. This,
-         * however, should not be a concern, as nonce
-         * deletion is managed automatically.
-         */ 
-        'leeway' => 300,
-    ]
 ];

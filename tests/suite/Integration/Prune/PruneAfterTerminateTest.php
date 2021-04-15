@@ -32,9 +32,8 @@ class PruneAfterTerminateTest extends IntegrationTestCase
             ['nonce_1']
         );
 
-        $fastForward = $this->epoch->copy()->add(299, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(299999, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_2');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -45,9 +44,8 @@ class PruneAfterTerminateTest extends IntegrationTestCase
             ['nonce_1', 'nonce_2']
         );
 
-        $fastForward = $this->epoch->copy()->add(300, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(300000, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_3');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -58,9 +56,8 @@ class PruneAfterTerminateTest extends IntegrationTestCase
             ['nonce_1', 'nonce_2', 'nonce_3']
         );
 
-        $fastForward = $this->epoch->copy()->add(301, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(300001, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_4');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -71,9 +68,8 @@ class PruneAfterTerminateTest extends IntegrationTestCase
             ['nonce_2', 'nonce_3', 'nonce_4']
         );
 
-        $fastForward = $this->epoch->copy()->add(600, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(600000, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_5');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -84,9 +80,8 @@ class PruneAfterTerminateTest extends IntegrationTestCase
             ['nonce_3', 'nonce_4', 'nonce_5']
         );
 
-        $fastForward = $this->epoch->copy()->add(1000, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(1000000, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_6');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
