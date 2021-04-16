@@ -180,6 +180,10 @@ class AuthSodiumDelegate implements Guard
         }
     }
 
+    /**
+     * Delete nonces that are older than the leeway
+     * period, and return the number deleted.
+     */
     public function pruneNonces()
     {
         if (config('authsodium.check_nonces_table_before_pruning', true) && 
@@ -187,10 +191,8 @@ class AuthSodiumDelegate implements Guard
             return;
         }
         $leeway = $this->getTimestampLeeway();
-        // $cutoff = $this->getSystemTime()->subtract($leeway, 'seconds')->timestamp;
-        
         $cutoff = $this->getSystemTime() - $leeway;
-        Nonce::where('timestamp', '<', $cutoff)->delete();
+        return Nonce::where('timestamp', '<', $cutoff)->delete();
     }
 
     /**
@@ -250,19 +252,14 @@ class AuthSodiumDelegate implements Guard
         return config('authsodium.timestamp.leeway', 300000);
     }
 
-    protected function getAppTimezone()
-    {
-        return 'UTC';
-    }
-
     protected function getUniquePerTimestamp()
     {
         return config('authsodium.schema.nonce_unique_per_timestamp', false);
     }
 
     /**
-     * Returns milliseconds since midnight January 1st
-     * 1970 (UTC)
+     * Returns milliseconds (or seconds, depending on
+     * config) since midnight January 1st 1970 (UTC)
      */
     public function getSystemTime()
     {
@@ -408,7 +405,7 @@ class AuthSodiumDelegate implements Guard
             return null;
         }
         
-        if (!ctype_digit($value) || $value > PHP_INT_MAX) {
+        if (!$this->isValidInt($value)) {
             $this->onValidationError('invalid_timestamp_format');
             return null;
         }
@@ -433,7 +430,7 @@ class AuthSodiumDelegate implements Guard
             $this->onValidationError('invalid_timestamp_range');
             return null;
         }
-
+        
         return $value;
     }
 

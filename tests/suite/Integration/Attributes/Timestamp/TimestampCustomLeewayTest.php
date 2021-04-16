@@ -19,10 +19,8 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
     public function test_that_signed_request_with_timestamp_before_custom_leeway_fails()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->getTimestamp()
-            )->subtract(11, 'seconds')->timestamp
+        $this->setTimestampFromDate(
+            $this->epoch->copy()->subtract(11, 'milliseconds')
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
@@ -32,10 +30,8 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
     public function test_that_signed_request_with_timestamp_equal_to_negative_custom_leeway_succeeds()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->getTimestamp()
-            )->subtract(10, 'seconds')->timestamp
+        $this->setTimestampFromDate(
+            $this->epoch->copy()->subtract(10, 'milliseconds')
         );
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -45,10 +41,8 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
     public function test_that_signed_request_with_timestamp_equal_to_positive_custom_leeway_succeeds()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->getTimestamp()
-            )->add(10, 'seconds')->timestamp
+        $this->setTimestampFromDate(
+            $this->epoch->copy()->add(10, 'milliseconds')
         );
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -58,10 +52,8 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
     public function test_that_signed_request_with_timestamp_after_leeway_fails()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->getTimestamp()
-            )->add(11, 'seconds')->timestamp
+        $this->setTimestampFromDate(
+            $this->epoch->copy()->add(11, 'milliseconds')
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');

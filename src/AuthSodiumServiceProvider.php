@@ -7,6 +7,7 @@ use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Router;
 
 use ROTGP\AuthSodium\AuthSodiumDelegate;
+use ROTGP\AuthSodium\Console\PruneNonces;
 
 use Config;
 use Auth;
@@ -134,6 +135,10 @@ class AuthSodiumServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../config/config.php' => config_path('authsodium.php'),
             ], 'config');
+
+            $this->commands([
+                PruneNonces::class,
+            ]);
         }
 
         $this->app->terminating(function () use ($delegate) {

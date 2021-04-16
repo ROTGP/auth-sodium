@@ -47,8 +47,8 @@ class TimestampTest extends IntegrationTestCase
     public function test_that_signed_request_with_timestamp_after_leeway_fails()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            $this->epoch->copy()->add(300001, 'milliseconds')->timestamp
+        $this->setTimestampFromDate(
+            $this->epoch->copy()->add(300001, 'milliseconds')
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
@@ -106,8 +106,8 @@ class TimestampTest extends IntegrationTestCase
     public function test_that_signed_request_with_old_timestamp_fails()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            $this->epoch->copy()->subtract(300001, 'milliseconds')->timestamp
+        $this->setTimestampFromDate(
+            $this->epoch->copy()->subtract(300001, 'milliseconds')
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
@@ -123,8 +123,8 @@ class TimestampTest extends IntegrationTestCase
     public function test_that_signed_request_with_future_timestamp_fails()
     {
         $request = $this->signed()->request();
-        $this->timestamp(
-            $this->epoch->copy()->add(300001, 'milliseconds')->timestamp
+        $this->setTimestampFromDate(
+            $this->epoch->copy()->add(300001, 'milliseconds')
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');

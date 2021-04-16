@@ -96,7 +96,6 @@ abstract class IntegrationTestCase extends TestCase
     protected function setTestNow($value, $updateTimestamp = true)
     {
         Carbon::setTestNow($value);
-        $this->timestamp(Carbon::getTestNow()->timestamp);
         
         if ($updateTimestamp) {
             $this->setTimestampFromDate($value);
