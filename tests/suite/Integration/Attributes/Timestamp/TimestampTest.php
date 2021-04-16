@@ -48,9 +48,7 @@ class TimestampTest extends IntegrationTestCase
     {
         $request = $this->signed()->request();
         $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->add(300001, 'milliseconds')->timestamp
+            $this->epoch->copy()->add(300001, 'milliseconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
@@ -109,9 +107,7 @@ class TimestampTest extends IntegrationTestCase
     {
         $request = $this->signed()->request();
         $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->subtract(300001, 'milliseconds')->timestamp
+            $this->epoch->copy()->subtract(300001, 'milliseconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
@@ -128,9 +124,7 @@ class TimestampTest extends IntegrationTestCase
     {
         $request = $this->signed()->request();
         $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->add(300001, 'milliseconds')->timestamp
+            $this->epoch->copy()->add(300001, 'milliseconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');

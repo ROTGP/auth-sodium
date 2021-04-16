@@ -5,7 +5,7 @@ use ROTGP\AuthSodium\Test\Controllers\FooController;
 
 use Carbon\Carbon;
 
-class UseSecondsTimestampTest extends IntegrationTestCase
+class SecondsTimestampTest extends IntegrationTestCase
 {
     protected function customizeSetup()
     {
@@ -62,9 +62,7 @@ class UseSecondsTimestampTest extends IntegrationTestCase
     {
         $request = $this->signed()->request();
         $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->add(301, 'seconds')->timestamp
+            $this->epoch->copy()->add(301, 'seconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
@@ -123,9 +121,7 @@ class UseSecondsTimestampTest extends IntegrationTestCase
     {
         $request = $this->signed()->request();
         $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->subtract(301, 'seconds')->timestamp
+            $this->epoch->copy()->subtract(301, 'seconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
@@ -142,9 +138,7 @@ class UseSecondsTimestampTest extends IntegrationTestCase
     {
         $request = $this->signed()->request();
         $this->timestamp(
-            Carbon::createFromTimestamp(
-                $this->epoch->copy()->timestamp
-            )->add(301, 'seconds')->timestamp
+            $this->epoch->copy()->add(301, 'seconds')->timestamp
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
