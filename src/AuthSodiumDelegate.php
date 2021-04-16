@@ -266,12 +266,68 @@ class AuthSodiumDelegate implements Guard
      */
     public function getSystemTime()
     {
-        dd('WTFFFFF???');
-        return config('authsodium.timestamp.use_milliseconds', true) ?
+        return config('authsodium.timestamp.milliseconds', true) ?
             intval(microtime(true) * 1000) : time();
     }
 
-   /**
+    /**
+     * Validate the package's user-defined config, handy
+     * for running prior to migrations, prior to
+     * code-execution, or from the artisan CLI. 
+     */
+    public function validateConfig($throwExceptions = true)
+    {
+        $exceptions = [];
+        
+        // check OS support for big integers
+        $is64Bit = PHP_INT_SIZE === 8;
+        $useMilliseconds = config('authsodium.timestamp.milliseconds');
+        
+        if (!$is64Bit && $useMilliseconds) {
+            $exceptions[] = 'millisecond timestamp should not be used on 32 bit systems';
+        }
+
+        // check that leeway is not too permissive
+        $leeway = config('authsodium.timestamp.leeway');
+        if (!$this->isValidInt($leeway)) {
+            $exceptions[] = "leeway value of: $leeway is invalid";
+        }
+        
+        $leewayInSeconds = $useMilliseconds ? ($leeway / 1000) : $leeway;
+
+        if ($leewayInSeconds > 3600) {
+            $leewayInHours = number_format($leewayInSeconds / 3600, 5, '.', '');
+            $exceptions[] = "leeway should not exceed one hour (currently $leewayInHours hours)";
+        }
+
+        // check that model is valid
+        $model = config('authsodium.user.model');
+        
+        if (empty($model)) {
+            $exceptions[] = 'auth user model not defined';
+        } else if (!class_exists($model)) {
+            $exceptions[] = 'auth user model class: "' . $model . '" not found';
+        } else if (!is_a($model, Model::class, true)) {
+            $exceptions[] = 'auth user model class: "' . $model . '" must extend ' . Model::class;
+        } else if (!is_a($model, Authenticatable::class, true)) {
+            $exceptions[] = 'auth user model class: "' . $model . '" must implement ' . Authenticatable::class;
+        }
+
+        // @TODO what other config should be validated?
+
+        if ($throwExceptions && count($exceptions)) {
+            throw new Exception('Invalid Auth Sodium configuration - ' . $exceptions[0]);
+        }
+        
+        return count($exceptions) ? $exceptions : true;
+    }
+
+    public function getNonceMaxLength()
+    {
+        return config('authsodium.schema.nonce.length', 44);
+    }
+
+    /**
      * Validate the existence, length etc of signature,
      * not whether it's value is valid;
      */
@@ -279,6 +335,11 @@ class AuthSodiumDelegate implements Guard
     {
         if (!$value) {
             $this->onValidationError('nonce_not_found');
+            return null;
+        }
+
+        if (strlen($value) > $this->getNonceMaxLength()) {
+            $this->onValidationError('nonce_exceeds_max_length');
             return null;
         }
 
@@ -327,6 +388,19 @@ class AuthSodiumDelegate implements Guard
         return $value;
     }
 
+    /**
+     * Validate that a value is a valid int, whether it
+     * be an int, a float, a string (empty or
+     * otherwise), or null.
+     */
+    protected function isValidInt($value)
+    {
+        $value = strval($value);
+        return ctype_digit($value) &&
+            $value >= 0 &&
+            $value <= PHP_INT_MAX;
+    }
+
     protected function validateTimestamp($value)
     {
         if (empty($value)) {
@@ -340,11 +414,9 @@ class AuthSodiumDelegate implements Guard
         }
 
         $value = intval($value);
-
         $leeway = $this->getTimestampLeeway();
         $now = $this->getSystemTime();
-        // $requestTimestamp = Carbon::createFromTimestamp($value);
-        $difference = abs($now - $value); // abs($now->diffInSeconds($requestTimestamp));
+        $difference = abs($now - $value);
 
         // // dd($fooVal);
         // if ($difference > $leeway) {

@@ -75,7 +75,7 @@ abstract class IntegrationTestCase extends TestCase
     protected function mockTime()
     {
         $getSystemTime = function() {
-            return config('authsodium.timestamp.use_milliseconds', true) ? 
+            return config('authsodium.timestamp.milliseconds', true) ? 
                 intval(Carbon::now()->getPreciseTimestamp(3)) : 
                 Carbon::now()->getTimestamp();
         };
@@ -105,7 +105,7 @@ abstract class IntegrationTestCase extends TestCase
 
     protected function setTimestampFromDate($value)
     {
-        if (config('authsodium.timestamp.use_milliseconds', true)) {
+        if (config('authsodium.timestamp.milliseconds', true)) {
             $this->timestamp(intval($value->getPreciseTimestamp(3)));
         }  else {
             $this->timestamp($value->getTimestamp());

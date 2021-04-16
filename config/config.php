@@ -242,7 +242,7 @@ return [
          * also what to expect interally when validating
          * timestamps, and deleting them.
          */
-        'use_milliseconds' => true,
+        'milliseconds' => true,
 
         /**
          * The leeway (in seconds, or milliseconds,
@@ -276,6 +276,7 @@ return [
         'invalid_timestamp_range' => 0,
         'unable_to_build_signature_string' => 0,
         'nonce_not_found' => 0,
+        'nonce_exceeds_max_length' => 0,
         'nonce_already_exists' => 0,
     ],
 ];

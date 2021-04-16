@@ -6,6 +6,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Router;
 
+use ROTGP\AuthSodium\AuthSodiumDelegate;
+
 use Config;
 use Auth;
 
@@ -20,7 +22,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
     {
         \DB::flushQueryLog();
         
-        $delegateNamespace = config('authsodium.delegate');
+        $delegateNamespace = config('authsodium.delegate', AuthSodiumDelegate::class);
         $delegate = authSodium();
         
         $this->app->instance($delegateNamespace, $delegate);
