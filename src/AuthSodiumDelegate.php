@@ -22,11 +22,6 @@ class AuthSodiumDelegate implements Guard
     protected $user;
     protected $isMiddleware;
 
-    public function foo($value)
-    {
-        return ('original: ' . $value);
-    }
-
     /**
      * Determine if the current user is authenticated.
      *
@@ -732,8 +727,13 @@ class AuthSodiumDelegate implements Guard
             return $model::firstWhere($this->userUniqueIdentifier(), $uniqueIdentifier);
         });
 
-        if ($user === null || !$user) {
+        if (!$user) {
             $this->onValidationError('user_not_found');
+            return null;
+        }
+
+        if (method_exists($user, 'enabled') && $user->enabled() !== true) {
+            $this->onValidationError('user_not_enabled');
             return null;
         }
         

@@ -15,6 +15,7 @@ class User extends AuthSodiumUser
         'name',
         'email',
         'public_key',
+        'enabled'
     ];
 
     /**

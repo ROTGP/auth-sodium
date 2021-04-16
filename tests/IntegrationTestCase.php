@@ -43,6 +43,8 @@ abstract class IntegrationTestCase extends TestCase
 
     protected $mock;
 
+    protected $shouldMock = true;
+
     /**
      * Setup the test environment.
      */
@@ -60,6 +62,9 @@ abstract class IntegrationTestCase extends TestCase
         });
         $this->assertUserLoggedOut();
 
+        if (!$this->shouldMock) {
+            return;
+        }
         $this->resetMock();
         $this->mockTime();
     }
@@ -93,10 +98,17 @@ abstract class IntegrationTestCase extends TestCase
         Carbon::setTestNow($this->epoch);
     }
 
+    protected function setTimestampToNow($offset = 0)
+    {
+        $timestamp = config('authsodium.timestamp.milliseconds', true) ?
+            intval(microtime(true) * 1000) : time();
+        $this->timestamp($timestamp + $offset);
+    }
+
     protected function setTestNow($value, $updateTimestamp = true)
     {
         Carbon::setTestNow($value);
-        
+
         if ($updateTimestamp) {
             $this->setTimestampFromDate($value);
         }
@@ -280,7 +292,8 @@ abstract class IntegrationTestCase extends TestCase
             $user['model'] = User::create([
                 'name' => $user['name'],
                 'email' => $user['email'],
-                'public_key' => $user['public_key']
+                'public_key' => $user['public_key'],
+                'enabled' => true
             ]);
             $this->users[] = $user;
         }

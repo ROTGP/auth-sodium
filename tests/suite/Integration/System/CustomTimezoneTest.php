@@ -22,13 +22,11 @@ class CustomTimezoneTest extends IntegrationTestCase
         // $this->mockTime();
 
         // $this->mock->shouldReceive('foo')->andReturnUsing(function($value) {
-        //     return $value . 'baaaah';
+        //     return $value . 'foo';
         // });
 
         $request = $this->signed()->request();
-        // $this->timestamp($stPatricksDayInBangkok->getTimestamp());
         $response = $request->response();
-        // dd($response);
         $this->assertSuccessfulRequest($response);
         $this->assertUserLoggedOut();
     }

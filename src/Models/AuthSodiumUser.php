@@ -8,23 +8,12 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Exception;
 
 abstract class AuthSodiumUser extends Model implements Authenticatable
-{    
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'public_key'
-    ];
-
+{
+    // @TODO this is probably redundant? Get rid of it.
     public function nonces()
     {
         return $this->hasMany('ROTGP\AuthSodium\Models\Nonce');
     }
-
 
     // implement Illuminate\Contracts\Auth\Authenticatable methods
 

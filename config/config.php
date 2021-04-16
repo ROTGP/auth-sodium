@@ -266,6 +266,7 @@ return [
 
     'error_codes' => [
         'user_not_found' => 0,
+        'user_not_enabled' => 0,
         'user_identifier_not_found' => 0,
         'user_public_key_identifier_not_found' => 0,
         'user_public_key_not_found' => 0,
