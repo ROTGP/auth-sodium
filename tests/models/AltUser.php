@@ -4,7 +4,7 @@ namespace ROTGP\AuthSodium\Test\Models;
 
 use ROTGP\AuthSodium\Models\AuthSodiumUser;
 
-class User extends AuthSodiumUser
+class AltUser extends AuthSodiumUser
 {
     /**
      * The attributes that are mass assignable.
@@ -25,8 +25,10 @@ class User extends AuthSodiumUser
      */
     protected $hidden = [];
 
-    public function enabled()
+    protected $table = 'users';
+
+    public function getForeignKey()
     {
-        return boolval($this->enabled);
+        return 'user_id';
     }
 }
