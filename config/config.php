@@ -103,22 +103,25 @@ return [
          * specified, then the Auth facade itself will
          * be remain untouched, and instead you can use
          * Auth::guard('name'). For example, given the
-         * name: 'authsodium'...
+         * name: 'authsodium', instead of using
+         * Auth::user(), you would use
+         * `Auth::guard('authsodium')->user()`. See more
+         * examples as follows:
          *
          * - Auth::guard('authsodium')->check() // bool
-         * 
+         *
          * - Auth::guard('authsodium')->user() //
          *   object|null
-         * 
+         *
          * - Auth::guard('authsodium')->id() //
          *   int|string|null
-         * 
+         *
          * - Auth::guard('authsodium')->guest() // bool
-         * 
+         *
          * - Auth::guard('authsodium')->authenticateSignature()
          *   // bool
-         * 
-         * - Auth::guard('authsodium')->invalidateUser()
+         *
+         * - Auth::guard('authsodium')->invalidate()
          *   // bool
          *
          */
@@ -195,7 +198,7 @@ return [
     * https://laravel.com/docs/8.x/middleware#terminable-middleware
     *
     * If true, and your server supports terminating
-    * middleware, then Auth::invalidateUser will
+    * middleware, then Auth::invalidate will
     * be called explicitly after the response has been
     * sent to the browser. An attempt will also be made
     * via the `$this->app->terminating` method, however,

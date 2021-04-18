@@ -42,6 +42,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */
         if ($usingMiddleware)
             $kernel->prependToMiddlewarePriority($delegateNamespace);
+            
 
         /**
          * This will run the middleware ONLY if the
@@ -101,8 +102,24 @@ class AuthSodiumServiceProvider extends ServiceProvider
                 
             Auth::extend($guardName, function ($app, $name) use ($delegate) {
                 return authSodium();
-                // return $delegate;
             });
+
+            /**
+             * @TODO not really sure about this - I
+             * don't feel comfortable with events have a
+             * guard name of 'web' when no custom guard
+             * name is set - it seems weird. 
+             *
+             * Auth::setDefaultDriver($guardName);
+             *
+             * `Auth::getDefaultDriver()`
+             *
+             * https://stackoverflow.com/a/51400553/1985175
+             * "The default driver will now be set for
+             * all incoming request from either the api
+             * routes file or from within an api group."
+             * - ok so it's like global?
+             */
         
         /**
          *  For a consistent API, if we're not using a
@@ -115,12 +132,11 @@ class AuthSodiumServiceProvider extends ServiceProvider
                 return authSodium()->authenticateSignature();
             });
     
-            Auth::macro('invalidateUser', function () {
+            Auth::macro('invalidate', function () {
                 $this->user = null;
             });
         }
         
-
         if ($this->app->runningInConsole()) {
 
             $this->loadMigrationsFrom( __DIR__.'/../migrations/3000_01_01_000000_create_auth_sodium_tables.php');
@@ -143,7 +159,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
 
         $this->app->terminating(function () use ($delegate) {
             if (config('authsodium.log_out_after_request', true)) {
-                authSodium()->invalidateUser();
+                authSodium()->invalidate();
             }
 
             if (config('authsodium.prune_nonces_on_terminate', true)) {

@@ -60,6 +60,9 @@ abstract class IntegrationTestCase extends TestCase
         Event::listen('Illuminate\Auth\Events\*', function ($value, $event) {
             $this->events[] = $event[0];
         });
+        Event::listen('ROTGP\AuthSodium\Events\*', function ($value, $event) {
+            $this->events[] = $event[0];
+        });
         $this->assertUserLoggedOut();
 
         if (!$this->shouldMock) {

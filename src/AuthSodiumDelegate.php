@@ -6,11 +6,14 @@ use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Auth\Events\Authenticated;
+use Illuminate\Auth\Events\Attempting;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Support\Facades\Schema;
 
 use Symfony\Component\HttpFoundation\Response;
 
 use ROTGP\AuthSodium\Models\Nonce;
+use ROTGP\AuthSodium\Events\Invalidated;
 
 use Auth;
 use Closure;
@@ -110,12 +113,18 @@ class AuthSodiumDelegate implements Guard
      *
      * @return void
      */
-    public function invalidateUser()
+    public function invalidate()
     {
+        $user = $this->getUser();
+        
         if ($this->isGuard()) {
             $this->user = null;
         } else {
-            Auth::invalidateUser();
+            Auth::invalidate();
+        }
+        
+        if ($user) {
+            $this->fireInvalidatedEvent($user);
         }
     }
 
@@ -135,6 +144,46 @@ class AuthSodiumDelegate implements Guard
         }
     }
 
+    /**
+     * Fire the Invalidated event for the guard/user.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @return void
+     */
+    protected function fireInvalidatedEvent($user)
+    {
+        event(new Invalidated(
+            $this->guardName() ?? Auth::getDefaultDriver(), $user
+        ));
+    }
+
+    /**
+     * Fire the Attempting event for the guard/user.
+     *
+     * @param  array  $credentials
+     * @return void
+     */
+    protected function fireAttemptingEvent($credentials)
+    {
+        event(new Attempting(
+            $this->guardName() ?? Auth::getDefaultDriver(), $credentials, false
+        ));
+    }
+    
+    /**
+     * Fire the Invalidated event for the guard/user.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  array  $credentials
+     * @return void
+     */
+    protected function fireFailedEvent($user, $credentials)
+    {
+        event(new Failed(
+            $this->guardName() ?? Auth::getDefaultDriver(), $user, $credentials
+        ));
+    }
+    
     /**
      * If there is no user currently authenticated, then
      * try to authenticate one, based on the current
@@ -167,7 +216,7 @@ class AuthSodiumDelegate implements Guard
     public function terminate($request, $response)
     {
         if (config('authsodium.log_out_after_request', true)) {
-            $this->invalidateUser();
+            $this->invalidate();
         }
 
         if (config('authsodium.prune_nonces_after_request', true)) {
@@ -766,16 +815,42 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
+    // https://stackoverflow.com/a/41769505/1985175
+    public function getIp(){
+        foreach (array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR') as $key){
+            if (array_key_exists($key, $_SERVER) === true){
+                foreach (explode(',', $_SERVER[$key]) as $ip){
+                    $ip = trim($ip);
+                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false){
+                        return $ip;
+                    }
+                }
+            }
+        }
+         // return server ip when no client ip found
+        return request()->ip();
+    }
+
     public function validateRequest($request, $isMiddleware)
     {
-        // $x = config('authsodium.yum', 'oooo');
-        // dd($x, 'xxxzax', \App::environment(), \App::environment(), \App::environment(), \App::environment(), $this->abortOnInvalidSignature());
-
+        // dd($this->getIp(), $request->ip(), $this->getSignatureUrl($request), $request->getScheme(), $request->secure());
+        // @TODO remove this
         \DB::enableQueryLog();
         $this->isMiddleware = $isMiddleware;
         if ($this->getUser()) {
             return true;
         }
+
+        // Question - where and how do we want to
+        // throttle requests? By IP address obviously to
+        // identify the requester. What else? Full url?
+        // Full signature string? No! That would allow
+        // an attacker to keep trying combinations
+        // infinitely. What we really want is to limit
+        // ANY failed requests from an ip address, for a
+        // specific user. So, in summary - log/throttle
+        // requests for ipAddress + user->id, assuming
+        // that a user is found.
 
         $signatureToVerify = $this->retrieveSignature($request);
         if (!$signatureToVerify) {
@@ -787,7 +862,6 @@ class AuthSodiumDelegate implements Guard
             return false;
         }
 
-
         $publicKey = $this->retrievePublicKey($user);
         if (!$publicKey) {
             return false;
@@ -797,6 +871,14 @@ class AuthSodiumDelegate implements Guard
         if (!$message) {
             return false;
         }
+
+        $credentials = [
+            'public_key' => $this->encode($publicKey),
+            'message' => $message,
+            'signature' => $this->encode($signatureToVerify)
+        ];
+
+        $this->fireAttemptingEvent($credentials);
         
         $signatureIsValid = sodium_crypto_sign_verify_detached(
             $signatureToVerify,
@@ -805,7 +887,10 @@ class AuthSodiumDelegate implements Guard
         );
 
         if (!$signatureIsValid) {
-            $this->invalidateUser();
+            
+            $this->fireFailedEvent($user, $credentials);
+
+            $this->invalidate();
             if ($this->abortOnInvalidSignature()) {
                 $this->errorResponse(
                     'invalid_signature',

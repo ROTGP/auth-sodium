@@ -16,12 +16,9 @@ class FooController extends BaseController
 
     public function store()
     {
-        // dd('here we are', Auth::guard('authsodium')->user());
-        // dd('here we are', Auth::user());
-
         $payload = request()->post();
         $payload['user_id'] = Auth::guard('authsodium')->id();
-                
+        
         if ($payload['user_id'] === null)
             $this->validationErrorResponse(['error_key' => 'user id can not be null']);
         
