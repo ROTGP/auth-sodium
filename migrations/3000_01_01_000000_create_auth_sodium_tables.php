@@ -15,7 +15,7 @@ class CreateAuthSodiumTables extends Migration
     {
         authSodium()->validateConfig();
 
-        Schema::create('nonces', function (Blueprint $table) {
+        Schema::create('authsodium_nonces', function (Blueprint $table) {
             
             $userModel = authSodium()->authUserModel();
             $userForeignKey = $userModel->getForeignKey();
@@ -50,6 +50,6 @@ class CreateAuthSodiumTables extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('nonces');
+        Schema::dropIfExists('authsodium_nonces');
     }
 }

@@ -231,7 +231,7 @@ class AuthSodiumDelegate implements Guard
     public function pruneNonces()
     {
         if (config('authsodium.check_nonces_table_before_pruning', true) && 
-            !Schema::hasTable('nonces')) {
+            !Schema::hasTable('authsodium_nonces')) {
             return;
         }
         $leeway = $this->getTimestampLeeway();
