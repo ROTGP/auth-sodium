@@ -10,6 +10,13 @@ use AuthSodium;
 class Nonce extends Model
 {  
     /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'authsodium_nonces';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array
