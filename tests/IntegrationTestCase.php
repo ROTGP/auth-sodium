@@ -16,7 +16,6 @@ use Illuminate\Contracts\Http\Kernel;
 use Faker\Factory as Faker;
 use Carbon\Carbon;
 use Event;
-use AuthSodium;
 use Mockery\MockInterface;
 
 abstract class IntegrationTestCase extends TestCase
@@ -44,6 +43,8 @@ abstract class IntegrationTestCase extends TestCase
     protected $mock;
 
     protected $shouldMock = true;
+
+    protected $ipAddress = 1;
 
     /**
      * Setup the test environment.
@@ -82,7 +83,10 @@ abstract class IntegrationTestCase extends TestCase
 
     protected function mockTime()
     {
-        $getSystemTime = function() {
+        $getSystemTime = function($forceSeconds = false) {
+            if ($forceSeconds) {
+                return Carbon::now()->getTimestamp();
+            }
             return config('authsodium.timestamp.milliseconds', true) ? 
                 intval(Carbon::now()->getPreciseTimestamp(3)) : 
                 Carbon::now()->getTimestamp();
@@ -106,6 +110,14 @@ abstract class IntegrationTestCase extends TestCase
         $timestamp = config('authsodium.timestamp.milliseconds', true) ?
             intval(microtime(true) * 1000) : time();
         $this->timestamp($timestamp + $offset);
+    }
+    
+    protected function updateTestNow($value, $units = 'seconds')
+    {
+        $this->setTestNow($this->epoch->copy()->add($value, $units), true);
+        // reset signature as it will become invalid
+        $this->signature(null);
+        return $this;
     }
 
     protected function setTestNow($value, $updateTimestamp = true)
@@ -142,6 +154,18 @@ abstract class IntegrationTestCase extends TestCase
         $this->signed = false;
     }
 
+    protected function ipAddress($value)
+    {
+        $this->ipAddress = $value;
+        $getIpAddress = function($request) {
+            return $this->ipAddress;
+        };
+        
+        $this->mock->shouldReceive('getIpAddress')->andReturnUsing($getIpAddress);
+        
+        return $this;
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
@@ -150,6 +174,25 @@ abstract class IntegrationTestCase extends TestCase
     public static function faker() {
         if (!isset(self::$fake)) self::$fake = Faker::create();
         return self::$fake;
+    }
+
+    protected function flipSignature($increment = true)
+    {
+        $signature = $this->getSignature();
+        if (is_numeric($signature[0])) {
+            $x = $increment ? 1 : -1;
+            $signature[0] =  ($signature[0] + $x + 10) % 10;
+        } else {
+            $signature[0] = ctype_upper($signature[0]) ? strtolower($signature[0]) : strtoupper($signature[0]);
+        }
+        $this->signature($signature);
+        return $this;
+    }
+
+    protected function withUser($idx)
+    {
+        $this->user($this->users[$idx - 1]);
+        return $this;
     }
 
     protected function asUser($id)
@@ -218,7 +261,20 @@ abstract class IntegrationTestCase extends TestCase
         $this->assertArrayHasKey('http_status_code', $json);
         $this->assertEquals(401, $json['http_status_code']);
         $this->assertArrayHasKey('http_status_message', $json);
-        $this->assertEquals("Unauthorized", $json['http_status_message']);
+        $this->assertEquals('Unauthorized', $json['http_status_message']);
+    }
+
+    protected function assertTooManyRequests($response, $tryAgain)
+    {
+        $response->assertStatus(429);
+        $json = $this->decodeResponse($response);
+        $this->assertArrayHasKey('http_status_code', $json);
+        $this->assertEquals(429, $json['http_status_code']);
+        $this->assertArrayHasKey('http_status_message', $json);
+        $this->assertEquals('Too Many Requests', $json['http_status_message']);
+        $this->assertArrayHasKey('error_message', $json);
+        $this->assertEquals('Too many requests please wait', $json['error_message']);
+        $this->assertEquals($tryAgain, $json['try_again']);
     }
 
     protected function assertValidationError($response, $error)
@@ -382,6 +438,12 @@ abstract class IntegrationTestCase extends TestCase
         $params['timestamp'] = $this->getTimestamp();
         $params['nonce'] = $this->nonce;
         return $params;
+    }
+
+    public function new()
+    {
+        $this->cleanupRequestData();
+        return $this;
     }
 
     public function getSignatureString()

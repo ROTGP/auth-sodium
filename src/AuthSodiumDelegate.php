@@ -13,12 +13,15 @@ use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 use ROTGP\AuthSodium\Models\Nonce;
+use ROTGP\AuthSodium\Models\Throttle;
 use ROTGP\AuthSodium\Events\Invalidated;
 
 use Auth;
 use Closure;
 use Exception;
-use Carbon\Carbon;
+
+use DateTime;
+use DateTimeZone;
 
 class AuthSodiumDelegate implements Guard
 {
@@ -305,8 +308,11 @@ class AuthSodiumDelegate implements Guard
      * Returns milliseconds (or seconds, depending on
      * config) since midnight January 1st 1970 (UTC)
      */
-    public function getSystemTime()
+    public function getSystemTime($forceSeconds = false)
     {
+        if ($forceSeconds) {
+            return time();
+        }
         return config('authsodium.timestamp.milliseconds', true) ?
             intval(microtime(true) * 1000) : time();
     }
@@ -710,7 +716,7 @@ class AuthSodiumDelegate implements Guard
     protected function validationErrorCode()
     {
         return config(
-            'authsodium.validation_error_code',
+            'authsodium.http_status_codes.validation_error',
             422
         );
     }
@@ -722,8 +728,32 @@ class AuthSodiumDelegate implements Guard
     protected function authorizationFailedCode()
     {
         return config(
-            'authsodium.authorization_failed_http_code',
+            'authsodium.http_status_codes.unauthorized',
             401
+        );
+    }
+
+    /**
+     * All the required information was provided, but
+     * the signature verification failed.
+     */
+    protected function tooManyRequestsCode()
+    {
+        return config(
+            'authsodium.http_status_codes.too_many_requests',
+            429
+        );
+    }
+
+    /**
+     * All the required information was provided, but
+     * the signature verification failed.
+     */
+    protected function forbiddenCode()
+    {
+        return config(
+            'authsodium.http_status_codes.forbidden',
+            403
         );
     }
 
@@ -782,6 +812,8 @@ class AuthSodiumDelegate implements Guard
         }
 
         if (method_exists($user, 'enabled') && $user->enabled() !== true) {
+            // @TODO maybe this should return a 403
+            // forbidden, instead of a validation error?
             $this->onValidationError('user_not_enabled');
             return null;
         }
@@ -816,19 +848,122 @@ class AuthSodiumDelegate implements Guard
     }
 
     // https://stackoverflow.com/a/41769505/1985175
-    public function getIp(){
-        foreach (array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR') as $key){
+    public function getIpAddress($request){
+        foreach ([
+            'HTTP_CLIENT_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_FORWARDED',
+            'HTTP_X_CLUSTER_CLIENT_IP',
+            'HTTP_FORWARDED_FOR',
+            'HTTP_FORWARDED',
+            'REMOTE_ADDR'
+            ] as $key){
             if (array_key_exists($key, $_SERVER) === true){
                 foreach (explode(',', $_SERVER[$key]) as $ip){
                     $ip = trim($ip);
-                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false){
+                    if (filter_var(
+                        $ip,
+                        FILTER_VALIDATE_IP,
+                        FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+                        ) !== false){
                         return $ip;
                     }
                 }
             }
         }
          // return server ip when no client ip found
-        return request()->ip();
+        return $request->ip();
+    }
+
+    /**
+     * Checks if a throttle exists for the user and ip
+     * address pertaining to the request. 
+     *
+     * If none exists then returns immediately.
+     *
+     * If one exists, then we check that the current
+     * time is less than or equal to it's try_again
+     * value.
+     *  - If it's not, then we simply abort with a
+     * message
+     *  - If it is, then we return.
+     */
+    protected function preThrottle($throttle, $now, $decayValues)
+    {
+        /**
+         * If no throttle exist then there's no
+         * need to continue.
+         */
+        if (!$throttle) {
+            return;
+        }
+        
+        // check if blocked entirely
+        if ($throttle->blocked) {
+            $this->throttleExhausted();
+        }
+
+        if ($now >= $throttle->try_again) {
+            return;
+        }
+        
+        $this->errorResponse(
+            'too_many_requests_please_wait',
+            $this->tooManyRequestsCode(),
+            ['try_again' => $throttle->try_again]
+        );
+    }
+
+    protected function shouldThrottle()
+    {
+        /**
+         * If not middleware and we're only running on
+         * middleware, then return false.
+         */
+        if (!$this->isMiddleware && config('authsodium.throttle.middleware_only', true)) {
+            return false;
+        }
+        
+        $enabled = config('authsodium.throttle.enabled', true);
+
+        $excluded = in_array(
+            app()->environment(), 
+            config('authsodium.throttle.exclude_environments', ['local'])
+        );
+
+        return $enabled && !$excluded;
+    }
+
+    protected function throttleExhausted()
+    {
+        $this->errorResponse(
+            'too_many_requests_forbidden',
+            $this->forbiddenCode(),
+        );
+    }
+
+    protected function getThrottleDecay()
+    {
+        return config('authsodium.throttle.decay', [0, 0, 0, 1, 3, 10, 60, 300]);
+    }
+
+    protected function postThrottle($throttle, $decayValues)
+    {
+        if ($throttle->id) {
+            $throttle->attempts++;
+        }
+
+        $decay = $decayValues[$throttle->attempts] ?? 0;
+        $throttle->try_again += $decay;
+        if ($throttle->attempts >= count($decayValues)) {
+            $throttle->blocked = true;
+        }
+        
+        $throttle->save();
+        
+        if ($throttle->blocked) {
+            $this->throttleExhausted();
+        }
     }
 
     public function validateRequest($request, $isMiddleware)
@@ -840,17 +975,6 @@ class AuthSodiumDelegate implements Guard
         if ($this->getUser()) {
             return true;
         }
-
-        // Question - where and how do we want to
-        // throttle requests? By IP address obviously to
-        // identify the requester. What else? Full url?
-        // Full signature string? No! That would allow
-        // an attacker to keep trying combinations
-        // infinitely. What we really want is to limit
-        // ANY failed requests from an ip address, for a
-        // specific user. So, in summary - log/throttle
-        // requests for ipAddress + user->id, assuming
-        // that a user is found.
 
         $signatureToVerify = $this->retrieveSignature($request);
         if (!$signatureToVerify) {
@@ -866,12 +990,26 @@ class AuthSodiumDelegate implements Guard
         if (!$publicKey) {
             return false;
         }
-
+        
         $message = $this->buildSignatureString($request, $user);
         if (!$message) {
             return false;
         }
-
+        
+        $authUserIdentifier = $user->getAuthIdentifier();
+        $shouldThrottle = $this->shouldThrottle();
+        
+        if ($shouldThrottle) {
+            $ipAddress = $this->getIpAddress($request);
+            $now = $this->getSystemTime(true);
+            $decayValues = $this->getThrottleDecay();
+            $throttle = Throttle::forUserIdentifier($authUserIdentifier)
+                ->where('ip_address', $ipAddress)
+                ->first();
+            $this->preThrottle($throttle, $now, $decayValues);
+        }
+        
+        
         $credentials = [
             'public_key' => $this->encode($publicKey),
             'message' => $message,
@@ -887,6 +1025,16 @@ class AuthSodiumDelegate implements Guard
         );
 
         if (!$signatureIsValid) {
+
+            if ($shouldThrottle) {
+                $this->postThrottle($throttle ?? new Throttle([
+                    'user_id' => $authUserIdentifier,
+                    'ip_address' => $ipAddress,
+                    'attempts' => 0,
+                    'try_again' => $this->getSystemTime(true),
+                    'blocked' => false
+                ]), $decayValues);
+            }
             
             $this->fireFailedEvent($user, $credentials);
 
@@ -904,10 +1052,19 @@ class AuthSodiumDelegate implements Guard
         $nonce = $this->getSignatureNonce($request, $user, false, null);
         $timestamp = (int) $this->getSignatureTimestamp($request, false);
         Nonce::create([
-            'user_id' => $user->getAuthIdentifier(),
+            'user_id' => $authUserIdentifier,
             'value' => $nonce,
             'timestamp' => $timestamp
         ]);
+
+        /**
+         * Authentication was successful, so delete all
+         * failed attempts for this user and address
+         */ 
+        if ($shouldThrottle) {
+            Throttle::forUserIdentifier($authUserIdentifier)
+                ->where('ip_address', $this->getIpAddress($request))->delete();
+        }
 
         $this->setUser($user);
         
@@ -958,12 +1115,12 @@ class AuthSodiumDelegate implements Guard
     protected function onValidationError($errorKey)
     {
         if ($this->abortOnInvalidSignature()) {
-            $httpStatusCode = config('authsodium.validation_http_error_code', 422);
+            $httpStatusCode = $this->validationErrorCode();
             $this->errorResponse($errorKey, $httpStatusCode);
         }
     }
 
-    protected function errorResponse($errorKey, $httpStatusCode = 401, $extras = []) : void
+    protected function errorResponse($errorKey, $httpStatusCode, $extras = []) : void
     {
         if (!is_int($httpStatusCode)) {
             throw new Exception('HTTP status code is required');

@@ -233,8 +233,54 @@ return [
 
     'encoding' => 'base64', // or 'hex'
 
-    'validation_http_error_code' => 422, // some people prefer 400
-    'authorization_failed_http_code' => 401,
+    
+    'http_status_codes' => [
+
+        /**
+         * When all the associated metadata has been
+         * provided and validated, but the signature is
+         * invalid.
+         */
+        'unauthorized' => 401,
+
+        /**
+         * User has been blocked because they have
+         * exceeded the allowable amount of failed
+         * authentication requests, as defined in
+         * `throttle.decay`, or because their account is
+         * not currently enabled (as defined by calling
+         * the 'enabled' method on the model, and
+         * receiving a false result).
+         */
+        'forbidden' => 403,
+
+        /**
+         * The user and IP address have attempted too
+         * many failed authenticated requests, and a
+         * period of time must be observed before
+         * attempting again.
+         */
+        'too_many_requests' => 429,
+
+        /**
+         * Some metadata related to the authentication
+         * was incorrect, invalid, or missing. Examples:
+         * - nonce_not_found
+         * - nonce_exceeds_max_length
+         * - timestamp_not_found
+         * - nonce_already_exists
+         * - signature_not_found
+         * - signature_invalid_length
+         * - invalid_timestamp_format
+         * - onValidationError
+         * - user_identifier_not_found
+         * - user_public_key_identifier_not_found
+         * - user_public_key_not_found
+         * - onValidationError
+         * - unable_to_build_signature_string
+         */
+        'validation_error' => 422 // some people prefer 400
+    ],
 
     'timestamp' => [
         
@@ -267,6 +313,49 @@ return [
         'leeway' => 300000
     ],
 
+    /**
+     * Configure how failed authentication attempts are
+     * managed.
+     */
+    'throttle' => [
+
+        /**
+         * Whether or not throttling is currently
+         * enabled.
+         */
+        'enabled' => true,
+
+        /**
+         * The invervals (in seconds) after which a new
+         * authentication attempt can be made, after
+         * having made an initial failed one. Zero
+         * indicates that an attempt can be made
+         * immediately. Intervals are relative to the
+         * preceding one, so the default would allow
+         * three consecutive immediate attempts, then an
+         * attempt in 1 second, then 3 seconds following
+         * that, etc. After the last attempt (the 8th,
+         * by default) fails, the user is considered to
+         * be blocked.
+         */
+        'decay' => [0, 0, 0, 1, 3], // [0, 0, 0, 1, 3, 10, 60, 300],
+
+        /**
+         * Throttling will not be applied at all for
+         * these environments.
+         */
+        'exclude_environments' => ['local'],
+
+        /**
+         * If true (the default), will only throttle
+         * automated middleware authentications, not
+         * explicit calls such as
+         * `Auth::authenticateSignature()` or
+         * `Auth::guard('authsodium')->authenticateSignature()`
+         */
+        'middleware_only' => true
+    ],
+
     'error_codes' => [
         'user_not_found' => 0,
         'user_not_enabled' => 0,
@@ -282,5 +371,7 @@ return [
         'nonce_not_found' => 0,
         'nonce_exceeds_max_length' => 0,
         'nonce_already_exists' => 0,
+        'too_many_requests_please_wait' => 0,
+        'too_many_requests_forbidden' => 0
     ],
 ];

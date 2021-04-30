@@ -34,7 +34,7 @@ class CustomHeadersTest extends IntegrationTestCase
             'foo-Signature' => $headers['Auth-Signature'],
         ];
         $this->headers($newHeaders);
-        $response =  $request->response();
+        $response = $request->response();
         $this->assertSuccessfulRequest($response);
         $this->assertUserLoggedOut();
     }

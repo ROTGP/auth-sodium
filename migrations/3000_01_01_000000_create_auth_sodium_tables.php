@@ -13,14 +13,15 @@ class CreateAuthSodiumTables extends Migration
      */
     public function up()
     {
+        // @TODO why are we doing this? 
         authSodium()->validateConfig();
 
-        Schema::create('authsodium_nonces', function (Blueprint $table) {
-            
-            $userModel = authSodium()->authUserModel();
-            $userForeignKey = $userModel->getForeignKey();
-            $usersTable = $userModel->getTable();
-            $userKeyName = $userModel->getKeyName();
+        $userModel = authSodium()->authUserModel();
+        $userForeignKey = $userModel->getForeignKey();
+        $usersTable = $userModel->getTable();
+        $userKeyName = $userModel->getKeyName();
+
+        Schema::create('authsodium_nonces', function (Blueprint $table) use ($userForeignKey, $usersTable, $userKeyName) {
             
             $table->id();
             $table->string('value', authSodium()->getNonceMaxLength());
@@ -41,6 +42,27 @@ class CreateAuthSodiumTables extends Migration
             }
             $table->unique($uniqueConstraints);
         });
+
+        Schema::create('authsodium_throttles', function (Blueprint $table)  use ($userForeignKey, $usersTable, $userKeyName) {
+            
+            $table->id();
+
+            // foreign key for user
+            $table->unsignedBigInteger($userForeignKey);
+            $table
+                ->foreign($userForeignKey)
+                ->references($userKeyName)
+                ->on($usersTable)
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+            
+            $table->string('ip_address', 45);
+            $table->integer('attempts')->default(0);
+            $table->timestamp('try_again')->nullable();
+            $table->boolean('blocked');
+
+            $table->unique([$userForeignKey, 'ip_address']);
+        });
     }
 
     /**
@@ -50,6 +72,7 @@ class CreateAuthSodiumTables extends Migration
      */
     public function down()
     {
+        Schema::dropIfExists('authsodium_throttles');
         Schema::dropIfExists('authsodium_nonces');
     }
 }

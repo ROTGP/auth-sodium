@@ -6,14 +6,24 @@ use Illuminate\Database\Eloquent\Model;
 
 use Exception;
 
-class Nonce extends Model
+class Throttle extends Model
 {  
     /**
      * The table associated with the model.
      *
      * @var string
      */
-    protected $table = 'authsodium_nonces';
+    protected $table = 'authsodium_throttles';
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'attempts' => 'integer',
+        'try_again' => 'integer',
+    ];
 
     /**
      * The attributes that are guarded. As this is the

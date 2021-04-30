@@ -5,7 +5,6 @@ namespace ROTGP\AuthSodium\Test\Controllers;
 use ROTGP\AuthSodium\Test\Models\Foo;
 
 use Auth;
-use AuthSodium;
 
 class FooController extends BaseController
 {
