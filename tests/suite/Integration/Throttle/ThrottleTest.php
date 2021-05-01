@@ -336,4 +336,176 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals('127.0.0.1', $throttles[1]->ip_address);
         $this->assertFalse(boolval($throttles[1]->blocked));
     }
+
+    public function test_clear_throttle_by_user()
+    {
+        config(['authsodium.throttle.decay' => [0]]);
+
+        $userId = 1;
+
+        $response = $this->signed()->request()->withUser($userId)->nonce(1)->response();
+        $this->assertSuccessfulRequest($response);
+        $this->assertNull(Throttle::first());
+
+        $response = $this->signed()->request()->withUser($userId)->nonce(2)->flipSignature()->response();
+        $this->assertUnauthorized($response);
+        
+        $response = $this->response();
+        $this->assertForbidden($response);
+        $this->assertTrue(boolval(Throttle::first()->blocked));
+        
+        $response = $this->signed()->request()->withUser($userId)->nonce(2)->response();
+        $this->assertForbidden($response);
+
+        $response = $this->signed()->request()->withUser($userId)->nonce(2)->response();
+        $this->assertForbidden($response);
+
+        $userId = 2;
+
+        $response = $this->new()->signed()->request()->withUser($userId)->nonce(2)->response();
+        $this->assertSuccessfulRequest($response);
+
+        $userId = 1;
+        $response = $this->new()->signed()->request()->withUser($userId)->nonce(3)->response();
+        $this->assertForbidden($response);
+
+        $userId = 2;
+        $response = $this->new()->signed()->request()->withUser($userId)->nonce(4)->response();
+        $this->assertSuccessfulRequest($response);
+
+        $response = $this->new()->signed()->request()->withUser($userId)->nonce(5)->flipSignature()->response();
+        $this->assertUnauthorized($response);
+
+        $throttles = Throttle::all();
+        $this->assertEquals(1, $throttles[0]->user_id);
+        $this->assertEquals('127.0.0.1', $throttles[0]->ip_address);
+        $this->assertTrue(boolval($throttles[0]->blocked));
+        
+        $this->assertEquals(2, $throttles[1]->user_id);
+        $this->assertEquals('127.0.0.1', $throttles[1]->ip_address);
+        $this->assertFalse(boolval($throttles[1]->blocked));
+        
+        $this->assertEquals(1, authsodium()->clearThrottle(1, null));
+        $throttles = Throttle::all();
+
+        $this->assertCount(1, $throttles);
+
+        $this->assertEquals(2, $throttles[0]->user_id);
+        $this->assertEquals('127.0.0.1', $throttles[0]->ip_address);
+        $this->assertFalse(boolval($throttles[0]->blocked));
+        
+        $this->assertEquals(1, authsodium()->clearThrottle(2, null));
+        $this->assertCount(0, Throttle::all()); 
+    }
+
+    public function test_clear_throttle_by_ip_addresss()
+    {
+        config(['authsodium.throttle.decay' => [0]]);
+
+        $userId = 1;
+        $this->ipAddress(1);
+
+        $response = $this->signed()->request()->withUser($userId)->nonce(1)->response();
+        $this->assertSuccessfulRequest($response);
+        $this->assertNull(Throttle::first());
+
+        $response = $this->signed()->request()->withUser($userId)->nonce(2)->flipSignature()->response();
+        $this->assertUnauthorized($response);
+        
+        $response = $this->response();
+        $this->assertForbidden($response);
+        $this->assertTrue(boolval(Throttle::first()->blocked));
+        
+        $response = $this->signed()->request()->withUser($userId)->nonce(2)->response();
+        $this->assertForbidden($response);
+
+        $response = $this->signed()->request()->withUser($userId)->nonce(2)->response();
+        $this->assertForbidden($response);
+
+        $this->ipAddress(2);
+
+        $response = $this->new()->signed()->request()->withUser($userId)->nonce(2)->response();
+        $this->assertSuccessfulRequest($response);
+
+        $this->ipAddress(1);
+        $response = $this->new()->signed()->request()->withUser($userId)->nonce(3)->response();
+        $this->assertForbidden($response);
+
+        $this->ipAddress(2);
+        $response = $this->new()->signed()->request()->withUser($userId)->nonce(4)->response();
+        $this->assertSuccessfulRequest($response);
+
+        $response = $this->new()->signed()->request()->withUser($userId)->nonce(5)->flipSignature()->response();
+        $this->assertUnauthorized($response);
+
+        $throttles = Throttle::all();
+        $this->assertEquals(1, $throttles[0]->user_id);
+        $this->assertEquals(1, $throttles[0]->ip_address);
+        $this->assertTrue(boolval($throttles[0]->blocked));
+        
+        $this->assertEquals(1, $throttles[1]->user_id);
+        $this->assertEquals(2, $throttles[1]->ip_address);
+        $this->assertFalse(boolval($throttles[1]->blocked));
+        
+        $this->assertEquals(1, authsodium()->clearThrottle(null, 1));
+        $throttles = Throttle::all();
+
+        $this->assertCount(1, $throttles);
+
+        $this->assertEquals(1, $throttles[0]->user_id);
+        $this->assertEquals(2, $throttles[0]->ip_address);
+        $this->assertFalse(boolval($throttles[0]->blocked));
+        
+        $this->assertEquals(1, authsodium()->clearThrottle(null, 2));
+        $this->assertCount(0, Throttle::all()); 
+    }
+
+    public function test_clear_throttle_by_user_and_ip_address()
+    {
+        Throttle::create([
+            'user_id' => 1,
+            'ip_address' => 1,
+            'attempts' => 1,
+            'try_again' => 1,
+            'blocked' => true
+        ]);
+
+        Throttle::create([
+            'user_id' => 1,
+            'ip_address' => 2,
+            'attempts' => 1,
+            'try_again' => 1,
+            'blocked' => true
+        ]);
+
+        Throttle::create([
+            'user_id' => 2,
+            'ip_address' => 1,
+            'attempts' => 1,
+            'try_again' => 1,
+            'blocked' => true
+        ]);
+
+        Throttle::create([
+            'user_id' => 2,
+            'ip_address' => 2,
+            'attempts' => 1,
+            'try_again' => 1,
+            'blocked' => true
+        ]);
+
+        $this->assertCount(4, Throttle::all());
+
+        $this->assertEquals(2, authsodium()->clearThrottle(null, 1));
+        $this->assertCount(2, Throttle::all());
+
+        $this->assertEquals(0, authsodium()->clearThrottle(1, 1));
+        $this->assertCount(2, Throttle::all());
+
+        $this->assertEquals(1, authsodium()->clearThrottle(1, null));
+        $this->assertCount(1, Throttle::all());
+
+        $this->assertEquals(1, authsodium()->clearThrottle(2, null));
+        $this->assertCount(0, Throttle::all());
+    }
 }

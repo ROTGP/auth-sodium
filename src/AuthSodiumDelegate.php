@@ -243,6 +243,30 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
+     * @TODO
+     */
+    public function clearThrottle($authUserIdentifier, $ipAddress)
+    {
+        if (!Schema::hasTable('authsodium_throttles') || 
+            ($authUserIdentifier === null && $ipAddress === null)
+            ) {
+            return false;
+        }
+
+        $query = Throttle::query();
+
+        if ($authUserIdentifier) {
+            $query->forUserIdentifier($authUserIdentifier);
+        }
+
+        if ($ipAddress) {
+            $query->where('ip_address', $ipAddress);
+        }
+
+        return $query->delete();
+    }
+    
+    /**
      * Return the method of the incoming request. Ie,
      * get, put, post or delete. We use lowercase as
      * standard.
