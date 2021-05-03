@@ -9,6 +9,9 @@ use Illuminate\Routing\Router;
 use ROTGP\AuthSodium\AuthSodiumDelegate;
 use ROTGP\AuthSodium\Console\PruneNonces;
 
+use ROTGP\AuthSodium\Models\Nonce;
+use ROTGP\AuthSodium\Models\Throttle;
+
 use Config;
 use Auth;
 
@@ -166,7 +169,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
                 authSodium()->pruneNonces();
             }
             // dd(\DB::getQueryLog());
-         });
+        });
     }
 
     public function register()

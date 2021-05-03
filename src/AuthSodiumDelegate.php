@@ -427,8 +427,6 @@ class AuthSodiumDelegate implements Guard
         if ($this->getUniquePerTimestamp()) {
             $query->where('timestamp', $timestamp);
         }
-
-        // dd($query->toSql(), $query->getBindings());
         
         $found = $query->first();
         
@@ -1085,7 +1083,7 @@ class AuthSodiumDelegate implements Guard
          * Authentication was successful, so delete all
          * failed attempts for this user and address
          */ 
-        if ($shouldThrottle) {
+        if ($shouldThrottle && $throttle) {
             Throttle::forUserIdentifier($authUserIdentifier)
                 ->where('ip_address', $this->getIpAddress($request))->delete();
         }
