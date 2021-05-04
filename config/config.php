@@ -286,7 +286,7 @@ return [
         
         /**
          * Whether to use milliseconds (true) or seconds
-         * (false) when dealing with timestamps. The
+         * (false) when dealing with timestamps. This
          * dicates what the end-user should send, and
          * also what to expect interally when validating
          * timestamps, and deleting them.
@@ -326,12 +326,19 @@ return [
         'enabled' => true,
 
         /**
-         * The invervals (in seconds) after which a new
-         * authentication attempt can be made, after
-         * having made an initial failed one. Zero
-         * indicates that an attempt can be made
-         * immediately. Intervals are relative to the
-         * preceding one, so the default would allow
+         * Whether to use milliseconds (true) or seconds
+         * (false) when dealing with throttles.
+         */
+        'milliseconds' => false,
+
+        /**
+         * The invervals (in seconds, or milliseconds,
+         * according to `throttle.milliseconds`) after
+         * which a new authentication attempt can be
+         * made, after having made an initial failed
+         * one. Zero indicates that an attempt can be
+         * made immediately. Intervals are relative to
+         * the preceding one, so the default would allow
          * three consecutive immediate attempts, then an
          * attempt in 1 second, then 3 seconds following
          * that, etc. After the last attempt (the 8th,
@@ -357,21 +364,101 @@ return [
     ],
 
     'error_codes' => [
-        'user_not_found' => 0,
-        'user_not_enabled' => 0,
-        'user_identifier_not_found' => 0,
-        'user_public_key_identifier_not_found' => 0,
-        'user_public_key_not_found' => 0,
-        'invalid_signature' => 0,
-        'signature_not_found' => 0,
-        'timestamp_not_found' => 0,
-        'invalid_timestamp_format' => 0,
-        'invalid_timestamp_range' => 0,
-        'unable_to_build_signature_string' => 0,
-        'nonce_not_found' => 0,
-        'nonce_exceeds_max_length' => 0,
-        'nonce_already_exists' => 0,
-        'too_many_requests_please_wait' => 0,
-        'too_many_requests_forbidden' => 0
+
+        /**
+         * Unable to find the specified Auth-User
+         */
+        'user_not_found' => null,
+
+        /**
+         * The specified Auth-User was found, but they
+         * are not currently enabled
+         */
+        'user_not_enabled' => null,
+
+        /**
+         * No identifier for the auth user was found in
+         * the headers
+         */
+        'user_identifier_not_found' => null,
+
+        /**
+         * No identifier for the auth user's public key
+         * was found in the headers
+         */
+        'user_public_key_identifier_not_found' => null,
+        
+        /**
+         * Unable to locate the public key for the
+         * specified Auth-User
+         */
+        'user_public_key_not_found' => null,
+        
+        /**
+         * All the right information was provided, but
+         * the signature was found to be invalid
+         */
+        'invalid_signature' => null,
+        
+        /**
+         * The signature was not found in the headers of
+         * the request
+         */
+        'signature_not_found' => null,
+
+        /**
+         * The timestamp was not found in the headers of the
+         * request
+         */
+        'timestamp_not_found' => null,
+
+        /**
+         * The timestamp format is invalid - most likely
+         * not an integer
+         */
+        'invalid_timestamp_format' => null,
+
+        /**
+         * The timestamp provided in the headers falls
+         * outside of the acceptable range (defined by `leeway`)
+         */
+        'invalid_timestamp_range' => null,
+        
+        /**
+         * The signature string was unable to be built
+         * (for an indeterminate reason)
+         */
+        'unable_to_build_signature_string' => null,
+        
+        /**
+         * The nonce was not found in the headers of the
+         * request
+         */
+        'nonce_not_found' => null,
+
+        /**
+         * The nonce is too long
+         */
+        'nonce_exceeds_max_length' => null,
+        
+        /**
+         * The nonce already exists for this user
+         */
+        'nonce_already_exists' => null,
+        
+        /**
+         * Too many failed requests have been made for a
+         * user/ip-address, and the length of time
+         * defined by `try_again` must be observed
+         * before trying again
+         */
+        'too_many_requests_please_wait' => null,
+
+        /**
+         * Too many failed requests have been made for a
+         * user/ip-address, and no further attempts are
+         * forbidden.
+         */
+        'too_many_requests_forbidden' => null
     ],
 ];

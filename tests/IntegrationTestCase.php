@@ -83,13 +83,8 @@ abstract class IntegrationTestCase extends TestCase
 
     protected function mockTime()
     {
-        $getSystemTime = function($forceSeconds = false) {
-            if ($forceSeconds) {
-                return Carbon::now()->getTimestamp();
-            }
-            return config('authsodium.timestamp.milliseconds', true) ? 
-                intval(Carbon::now()->getPreciseTimestamp(3)) : 
-                Carbon::now()->getTimestamp();
+        $getSystemTime = function($useMilliseconds) {
+            return $useMilliseconds ? intval(Carbon::now()->getPreciseTimestamp(3)) : Carbon::now()->getTimestamp();
         };
         
         $this->mock->shouldReceive('getSystemTime')->andReturnUsing($getSystemTime);

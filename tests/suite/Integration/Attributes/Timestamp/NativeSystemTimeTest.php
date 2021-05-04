@@ -23,11 +23,6 @@ class NativeSystemTimeTest extends IntegrationTestCase
         $this->router()
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
-
-        // config([
-        //     'authsodium.timestamp.milliseconds' => false,
-        //     'authsodium.timestamp.leeway' => 300,
-        // ]);
     }
 
     public function test_that_signed_request_with_st_patricks_day_timestamp_fails()

@@ -238,7 +238,7 @@ class AuthSodiumDelegate implements Guard
             return;
         }
         $leeway = $this->getTimestampLeeway();
-        $cutoff = $this->getSystemTime() - $leeway;
+        $cutoff = $this->getSystemTime($this->useTimestampMilliseconds()) - $leeway;
         return Nonce::where('timestamp', '<', $cutoff)->delete();
     }
 
@@ -328,17 +328,23 @@ class AuthSodiumDelegate implements Guard
         return config('authsodium.schema.nonce_unique_per_timestamp', false);
     }
 
+    protected function useTimestampMilliseconds()
+    {
+        return config('authsodium.timestamp.milliseconds', true);
+    }
+
+    protected function useThrottleMilliseconds()
+    {
+        return config('authsodium.throttle.milliseconds', false);
+    }
+
     /**
      * Returns milliseconds (or seconds, depending on
      * config) since midnight January 1st 1970 (UTC)
      */
-    public function getSystemTime($forceSeconds = false)
+    public function getSystemTime($useMilliseconds)
     {
-        if ($forceSeconds) {
-            return time();
-        }
-        return config('authsodium.timestamp.milliseconds', true) ?
-            intval(microtime(true) * 1000) : time();
+        return $useMilliseconds ? intval(microtime(true) * 1000) : time();;
     }
 
     /**
@@ -352,10 +358,10 @@ class AuthSodiumDelegate implements Guard
         
         // check OS support for big integers
         $is64Bit = PHP_INT_SIZE === 8;
-        $useMilliseconds = config('authsodium.timestamp.milliseconds');
+        $useMilliseconds = $this->useTimestampMilliseconds();
         
         if (!$is64Bit && $useMilliseconds) {
-            $exceptions[] = 'millisecond timestamp should not be used on 32 bit systems';
+            $exceptions[] = 'millisecond timestamps should not be used on 32 bit systems';
         }
 
         // check that leeway is not too permissive
@@ -484,19 +490,8 @@ class AuthSodiumDelegate implements Guard
 
         $value = intval($value);
         $leeway = $this->getTimestampLeeway();
-        $now = $this->getSystemTime();
+        $now = $this->getSystemTime($this->useTimestampMilliseconds());
         $difference = abs($now - $value);
-
-        // // dd($fooVal);
-        // if ($difference > $leeway) {
-        //     dd([
-        //         'now        ' => $now,
-        //         'incoming_ts' => $value,
-        //         'diff       ' => $difference,
-        //         'leeway     ' => $leeway,
-        //         'too much   ' => ($difference > $leeway),
-        //     ]);
-        // }
         
         if ($difference > $leeway) {
             $this->onValidationError('invalid_timestamp_range');
@@ -1023,7 +1018,7 @@ class AuthSodiumDelegate implements Guard
         
         if ($shouldThrottle) {
             $ipAddress = $this->getIpAddress($request);
-            $now = $this->getSystemTime(true);
+            $now = $this->getSystemTime($this->useThrottleMilliseconds());
             $decayValues = $this->getThrottleDecay();
             $throttle = Throttle::forUserIdentifier($authUserIdentifier)
                 ->where('ip_address', $ipAddress)
@@ -1053,7 +1048,7 @@ class AuthSodiumDelegate implements Guard
                     'user_id' => $authUserIdentifier,
                     'ip_address' => $ipAddress,
                     'attempts' => 0,
-                    'try_again' => $this->getSystemTime(true),
+                    'try_again' => $this->getSystemTime($this->useThrottleMilliseconds()),
                     'blocked' => false
                 ]), $decayValues);
             }
