@@ -45,6 +45,7 @@ abstract class IntegrationTestCase extends TestCase
     protected $shouldMock = true;
 
     protected $ipAddress = 1;
+    protected $scheme = 'http';
 
     /**
      * Setup the test environment.
@@ -78,6 +79,7 @@ abstract class IntegrationTestCase extends TestCase
         $this->mock = $this->partialMock(config('authsodium.delegate'), function (MockInterface $mock) {
             return $mock;
         });
+        $this->mock->shouldAllowMockingProtectedMethods();
         return $this->mock;
     }
 
@@ -157,6 +159,18 @@ abstract class IntegrationTestCase extends TestCase
         };
         
         $this->mock->shouldReceive('getIpAddress')->andReturnUsing($getIpAddress);
+        
+        return $this;
+    }
+
+    protected function scheme($value)
+    {
+        $this->scheme = $value;
+        $getScheme = function($request) {
+            return $this->scheme;
+        };
+        
+        $this->mock->shouldReceive('getScheme')->andReturnUsing($getScheme);
         
         return $this;
     }

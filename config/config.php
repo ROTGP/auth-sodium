@@ -95,6 +95,16 @@ return [
         'signature' => 'Auth-Signature'
     ],
 
+    /**
+     * The environments in which https connections are
+     * to be enforced. Non-https requests in these
+     * environments will fail.
+     */    
+    'secure' => [
+        'environments' => ['production'],
+        'schemes' => ['https']
+    ],
+
     'guard' => [
 
         /**
@@ -279,7 +289,12 @@ return [
          * - onValidationError
          * - unable_to_build_signature_string
          */
-        'validation_error' => 422 // some people prefer 400
+        'validation_error' => 422, // some people prefer 400
+        
+        /**
+         * https://stackoverflow.com/questions/2554778/what-is-the-proper-http-response-to-send-for-requests-that-require-ssl-tls
+         */
+        'secure_protocol_required' => 426
     ],
 
     'timestamp' => [
@@ -459,6 +474,11 @@ return [
          * user/ip-address, and no further attempts are
          * forbidden.
          */
-        'too_many_requests_forbidden' => null
+        'too_many_requests_forbidden' => null,
+
+        /**
+         * TLS/SSL secure protocol is not being used 
+         */
+        'secure_protocol_required' => null,
     ],
 ];

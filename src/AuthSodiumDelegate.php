@@ -18,6 +18,7 @@ use ROTGP\AuthSodium\Events\Invalidated;
 
 use Auth;
 use Closure;
+use Request;
 use Exception;
 
 use DateTime;
@@ -738,6 +739,16 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
+    protected function secureProtocolRequiredCode()
+    {
+        return config(
+            'authsodium.http_status_codes.secure_protocol_required',
+            426
+        );
+    }
+
+    
+
     /**
      * All the required information was provided, but
      * the signature verification failed.
@@ -838,7 +849,7 @@ class AuthSodiumDelegate implements Guard
         return $user;
     }
 
-    public function buildSignatureString($request, $user)
+    protected function buildSignatureString($request, $user)
     {
         $toSign = [];
         $toSign['method'] = $this->getSignatureMethod($request);
@@ -865,7 +876,7 @@ class AuthSodiumDelegate implements Guard
     }
 
     // https://stackoverflow.com/a/41769505/1985175
-    public function getIpAddress($request){
+    protected function getIpAddress($request){
         foreach ([
             'HTTP_CLIENT_IP',
             'HTTP_X_FORWARDED_FOR',
@@ -964,6 +975,11 @@ class AuthSodiumDelegate implements Guard
         return config('authsodium.throttle.decay', [0, 0, 0, 1, 3, 10, 60, 300]);
     }
 
+    protected function getSecureEnvironments()
+    {
+        return config('authsodium.secure.environments', ['production']);
+    }
+
     protected function postThrottle($throttle, $decayValues)
     {
         if ($throttle->id) {
@@ -983,10 +999,39 @@ class AuthSodiumDelegate implements Guard
         }
     }
 
-    public function validateRequest($request, $isMiddleware)
+    protected function getScheme($request)
     {
-        // dd($this->getIp(), $request->ip(), $this->getSignatureUrl($request), $request->getScheme(), $request->secure());
-        // @TODO remove this
+        return $request->getScheme();
+    }
+
+    protected function checkSecure($request)
+    {
+        if (!in_array(
+            strtolower(app()->environment()),
+            array_map('strtolower', $this->getSecureEnvironments()))
+            ) {
+            return;
+        }
+        
+        $acceptableSchemes = config('authsodium.secure.schemes', ['https']);
+        if (in_array(
+            $this->getScheme($request),
+            array_map('strtolower', $acceptableSchemes))
+            ) {
+            return;
+        }
+
+        // https://stackoverflow.com/questions/2554778/what-is-the-proper-http-response-to-send-for-requests-that-require-ssl-tls
+        
+        $this->errorResponse(
+            'secure_protocol_required',
+            $this->secureProtocolRequiredCode()
+        );
+    }
+
+    protected function validateRequest($request, $isMiddleware)
+    {
+        $this->checkSecure($request);
         \DB::enableQueryLog();
         $this->isMiddleware = $isMiddleware;
         if ($this->getUser()) {
