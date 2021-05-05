@@ -840,10 +840,10 @@ class AuthSodiumDelegate implements Guard
         }
 
         if (method_exists($user, 'enabled') && $user->enabled() !== true) {
-            // @TODO maybe this should return a 403
-            // forbidden, instead of a validation error?
-            $this->onValidationError('user_not_enabled');
-            return null;
+            $this->errorResponse(
+                'user_not_enabled',
+                $this->authorizationFailedCode(),
+            );
         }
         
         return $user;

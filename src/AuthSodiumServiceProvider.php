@@ -109,7 +109,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
 
             /**
              * @TODO not really sure about this - I
-             * don't feel comfortable with events have a
+             * don't feel comfortable with events having a
              * guard name of 'web' when no custom guard
              * name is set - it seems weird. 
              *

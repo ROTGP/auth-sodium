@@ -9,10 +9,14 @@ use Exception;
 
 abstract class AuthSodiumUser extends Model implements Authenticatable
 {
-    // @TODO this is probably redundant? Get rid of it.
     public function nonces()
     {
         return $this->hasMany('ROTGP\AuthSodium\Models\Nonce');
+    }
+
+    public function throttle()
+    {
+        return $this->hasOne('ROTGP\AuthSodium\Models\Throttle');
     }
 
     // implement Illuminate\Contracts\Auth\Authenticatable methods
