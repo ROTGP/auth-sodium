@@ -24,7 +24,6 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_timestamp_equal_to_negative_custom_leeway_succeeds()
@@ -35,7 +34,6 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_timestamp_equal_to_positive_custom_leeway_succeeds()
@@ -46,7 +44,6 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_timestamp_after_leeway_fails()
@@ -57,6 +54,5 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertUserLoggedOut();
     }
 }

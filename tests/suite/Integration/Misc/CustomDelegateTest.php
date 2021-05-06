@@ -20,11 +20,9 @@ class CustomDelegateTest extends IntegrationTestCase
         $request = $this->signed()->request();
         $response = $request->response();
         $this->assertUnauthorized($response);
-        $this->assertUserLoggedOut();
 
         $this->signatureString($this->getSignatureString() . 'foo');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 }

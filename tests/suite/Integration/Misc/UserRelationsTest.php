@@ -23,12 +23,10 @@ class UserEnabledTest extends IntegrationTestCase
         $json = $this->decodeResponse($response);
         $this->assertArrayHasKey('error_message', $json);
         $this->assertEquals('User not enabled', $json['error_message']);
-        $this->assertUserLoggedOut();
         
         $user->update(['enabled' => true]);
 
         $response = $this->signed()->request()->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 }

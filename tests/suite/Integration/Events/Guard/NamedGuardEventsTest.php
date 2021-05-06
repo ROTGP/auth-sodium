@@ -29,22 +29,19 @@ class NamedGuardEventsTest extends IntegrationTestCase
     {
         $response = $this->unsigned()->request('post')->response();
         $this->assertValidationError($response, 'user id can not be null');
-        $this->assertUserLoggedOut();
-
+        
         $request = $this->signed()->request('post');
         $signature = $request->getSignature();
         $signature[0] = 'k'; // swap first 'K' for lowwercase 'k'
-
+        
         $this->signature($signature);
         $response =  $request->response();
         $this->assertValidationError($response, 'user id can not be null');
-        $this->assertUserLoggedOut();
         
         $signature[0] = 'K'; // swap back to original
         $this->signature($signature);
         $response = $request->response();
         $response->assertStatus(201);
-        $this->assertUserLoggedOut();
         
         $event = $this->events[0];
         $this->assertTrue(is_a($event, 'Illuminate\Auth\Events\Attempting'));
@@ -65,7 +62,7 @@ class NamedGuardEventsTest extends IntegrationTestCase
             "message" => 'posthttp://localhost/foos{"a":"apple","b":"banana","c":"carrot"}{"name":"Jim"}dawn83@yahoo.com16160073200001',
             "signature" => "k9kU+dka556x9d101yjha/Ij3PLbBrjOUx/WnSLuWKYoAWA/79mqD/KDeXjOuK3iXIHdum+yMp3S0sfPh+f+DQ=="
         ]);
-
+        
         $event = $this->events[2];
         $this->assertTrue(is_a($event, 'Illuminate\Auth\Events\Attempting'));
         $this->assertEquals('authsodium', $event->guard);
@@ -74,7 +71,7 @@ class NamedGuardEventsTest extends IntegrationTestCase
             "message" => 'posthttp://localhost/foos{"a":"apple","b":"banana","c":"carrot"}{"name":"Jim"}dawn83@yahoo.com16160073200001',
             "signature" => "K9kU+dka556x9d101yjha/Ij3PLbBrjOUx/WnSLuWKYoAWA/79mqD/KDeXjOuK3iXIHdum+yMp3S0sfPh+f+DQ=="
         ]);
-
+        
         $event = $this->events[3];
         $this->assertTrue(is_a($event, 'Illuminate\Auth\Events\Authenticated'));
         $this->assertEquals('authsodium', $event->guard);
@@ -92,8 +89,7 @@ class NamedGuardEventsTest extends IntegrationTestCase
     {
         $response = $this->signed()->request('post')->response();
         $response->assertStatus(201);
-        $this->assertUserLoggedOut();
-
+        
         $event = $this->events[0];
         $this->assertTrue(is_a($event, 'Illuminate\Auth\Events\Attempting'));
         $this->assertEquals('authsodium', $event->guard);

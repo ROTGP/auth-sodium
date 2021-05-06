@@ -21,7 +21,6 @@ class TimestampTest extends IntegrationTestCase
         $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_timestamp_equal_to_negative_leeway_succeeds()
@@ -31,7 +30,6 @@ class TimestampTest extends IntegrationTestCase
         $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_timestamp_equal_to_positive_leeway_succeeds()
@@ -41,7 +39,6 @@ class TimestampTest extends IntegrationTestCase
         $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_timestamp_after_leeway_fails()
@@ -52,7 +49,6 @@ class TimestampTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_numeric_string_timestamp_succeeds()
@@ -64,7 +60,6 @@ class TimestampTest extends IntegrationTestCase
         $this->assertEquals('1616007320000', $stringTimestamp);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_non_numeric_timestamp_fails()
@@ -73,7 +68,6 @@ class TimestampTest extends IntegrationTestCase
         $this->timestamp('123abc');
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_format');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_decimal_timestamp_fails()
@@ -82,7 +76,6 @@ class TimestampTest extends IntegrationTestCase
         $this->timestamp('123.4');
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_format');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_null_timestamp_fails()
@@ -91,7 +84,6 @@ class TimestampTest extends IntegrationTestCase
         $this->timestamp(null);
         $response = $request->response();
         $this->assertValidationError($response, 'timestamp_not_found');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_empty_string_timestamp_fails()
@@ -100,7 +92,6 @@ class TimestampTest extends IntegrationTestCase
         $this->timestamp('');
         $response = $request->response();
         $this->assertValidationError($response, 'timestamp_not_found');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_old_timestamp_fails()
@@ -111,13 +102,11 @@ class TimestampTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertUserLoggedOut();
-
+        
         $newDate = $this->epoch->copy()->subtract(300000, 'milliseconds');
         $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_future_timestamp_fails()
@@ -128,12 +117,10 @@ class TimestampTest extends IntegrationTestCase
         );
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertUserLoggedOut();
-
+        
         $newDate = $this->epoch->copy()->add(300000, 'milliseconds');
         $this->setTimestampFromDate($newDate);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 }

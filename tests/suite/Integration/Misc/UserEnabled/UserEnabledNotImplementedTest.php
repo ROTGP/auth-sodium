@@ -23,7 +23,6 @@ class UserEnabledNotImplementedTest extends IntegrationTestCase
 
         $response = $this->signed()->request()->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
         
         $user->update(['enabled' => true]);
         
@@ -31,6 +30,5 @@ class UserEnabledNotImplementedTest extends IntegrationTestCase
         $this->nonce(2);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 }

@@ -22,16 +22,13 @@ class NonceUniquePerTimestampTest extends IntegrationTestCase
         $this->nonce('foo');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
-
+        
         $response = $request->response();
         $this->assertValidationError($response, 'nonce_already_exists');
-        $this->assertUserLoggedOut();
-
+        
         $oneSecondInTheFuture = $this->epoch->add(1, 'second');
         $this->setTestNow($oneSecondInTheFuture);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 }

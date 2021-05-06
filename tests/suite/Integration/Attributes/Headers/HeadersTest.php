@@ -26,7 +26,6 @@ class HeadersTest extends IntegrationTestCase
         $this->headers($headers);
         $response =  $request->response();
         $this->assertUnauthorized($response);
-        $this->assertUserLoggedOut();
     }
 
     /**
@@ -41,6 +40,5 @@ class HeadersTest extends IntegrationTestCase
         $this->headers($headers);
         $response =  $request->response();
         $this->assertValidationError($response, 'user_not_found');
-        $this->assertUserLoggedOut();
     }
 }

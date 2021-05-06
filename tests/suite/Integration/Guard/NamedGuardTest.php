@@ -29,13 +29,11 @@ class NamedGuardTest extends IntegrationTestCase
     {
         $response = $this->unsigned()->request('post')->response();
         $this->assertValidationError($response, 'user id can not be null');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_to_resource_that_uses_named_guard_succeeds()
     {
         $response = $this->signed()->request('post')->response();
         $response->assertStatus(201);
-        $this->assertUserLoggedOut();
     }
 }

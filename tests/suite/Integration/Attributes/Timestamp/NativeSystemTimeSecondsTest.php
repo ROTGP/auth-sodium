@@ -36,7 +36,6 @@ class NativeSystemTimeSecondsTest extends IntegrationTestCase
         $response = $request->response();
         $this->setTimestampFromDate($this->epoch);
         $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertUserLoggedOut();
         $this->assertEquals(1616007320, $this->getTimestamp());
     }
 
@@ -46,7 +45,6 @@ class NativeSystemTimeSecondsTest extends IntegrationTestCase
         $this->setTimestampToNow();
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_system_timestamp_in_seconds_within_leeway_succeeds()
@@ -55,7 +53,6 @@ class NativeSystemTimeSecondsTest extends IntegrationTestCase
         $this->setTimestampToNow(299);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_with_system_timestamp_in_seconds_exceeding_leeway_fails()
@@ -64,6 +61,5 @@ class NativeSystemTimeSecondsTest extends IntegrationTestCase
         $this->setTimestampToNow(301);
         $response = $request->response();
         $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertUserLoggedOut();
     }
 }

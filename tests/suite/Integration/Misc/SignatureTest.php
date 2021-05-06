@@ -22,13 +22,11 @@ class SignatureTest extends IntegrationTestCase
         $this->signature($signature);
         $response =  $request->response();
         $this->assertUnauthorized($response);
-        $this->assertUserLoggedOut();
-
+        
         $signature[0] = 'u'; // swap back to original
         $this->signature($signature);
         $response =  $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_to_protected_resource_with_null_signature_fails()
@@ -37,7 +35,6 @@ class SignatureTest extends IntegrationTestCase
         $this->signature('');
         $response =  $request->response();
         $this->assertValidationError($response, 'signature_not_found');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_to_protected_resource_with_short_signature_fails()
@@ -48,6 +45,5 @@ class SignatureTest extends IntegrationTestCase
         $this->signature($signature);
         $response =  $request->response();
         $this->assertValidationError($response, 'signature_invalid_length');
-        $this->assertUserLoggedOut();
     }
 }

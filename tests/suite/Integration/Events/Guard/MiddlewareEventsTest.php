@@ -16,11 +16,9 @@ class MiddlewareEventsTest extends IntegrationTestCase
     {
         $response = $this->signed()->request()->flipSignature()->response();
         $this->assertUnauthorized($response);
-        $this->assertUserLoggedOut();
 
         $response = $this->signed()->request()->flipSignature()->response();
         $response->assertStatus(200);
-        $this->assertUserLoggedOut();
         
         $event = $this->events[0];
         $this->assertTrue(is_a($event, 'Illuminate\Auth\Events\Attempting'));
@@ -68,8 +66,7 @@ class MiddlewareEventsTest extends IntegrationTestCase
     {
         $response = $this->signed()->request()->response();
         $response->assertStatus(200);
-        $this->assertUserLoggedOut();
-
+        
         $event = $this->events[0];
         $this->assertTrue(is_a($event, 'Illuminate\Auth\Events\Attempting'));
         $this->assertEquals('web', $event->guard);

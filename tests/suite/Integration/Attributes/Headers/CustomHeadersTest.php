@@ -36,6 +36,5 @@ class CustomHeadersTest extends IntegrationTestCase
         $this->headers($newHeaders);
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 }
