@@ -12,7 +12,7 @@ class ThrottleEventsTest extends IntegrationTestCase
             ->middleware('authsodium');
     }
     
-    public function test_that_signed_request_with_fails_then_succeeds_and_produces_expected_events()
+    public function test_that_signed_request_with_fails_then_succeeds_and_produces_expected_throttle_events()
     {
         $response = $this->signed()->request()->flipSignature()->response();
         $this->assertUnauthorized($response);
