@@ -6,7 +6,7 @@ use ROTGP\AuthSodium\Models\Nonce;
 
 use Carbon\Carbon;
 
-class DoNotPruneTest extends IntegrationTestCase
+class DoNotPruneAfterRequestTest extends IntegrationTestCase
 {
     protected function customizeSetup()
     {
@@ -14,7 +14,7 @@ class DoNotPruneTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
 
-        config(['authsodium.database.prune_nonces_after_request' => false]);
+        config(['authsodium.prune_nonces_after_request' => false]);
     }
 
     public function test_that_a_nonces_are_not_pruned_when_making_multiple_requests_over_time()
@@ -28,10 +28,9 @@ class DoNotPruneTest extends IntegrationTestCase
             Nonce::pluck('value')->toArray(),
             ['nonce_1']
         );
-
-        $fastForward = $this->epoch->copy()->add(299, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        
+        $fastForward = $this->epoch->copy()->add(299999, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_2');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -42,9 +41,8 @@ class DoNotPruneTest extends IntegrationTestCase
             ['nonce_1', 'nonce_2']
         );
 
-        $fastForward = $this->epoch->copy()->add(300, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(300000, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_3');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -55,9 +53,8 @@ class DoNotPruneTest extends IntegrationTestCase
             ['nonce_1', 'nonce_2', 'nonce_3']
         );
 
-        $fastForward = $this->epoch->copy()->add(301, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(300001, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_4');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -68,9 +65,8 @@ class DoNotPruneTest extends IntegrationTestCase
             ['nonce_1', 'nonce_2', 'nonce_3', 'nonce_4']
         );
 
-        $fastForward = $this->epoch->copy()->add(600, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(600000, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_5');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);
@@ -81,9 +77,8 @@ class DoNotPruneTest extends IntegrationTestCase
             ['nonce_1', 'nonce_2', 'nonce_3', 'nonce_4', 'nonce_5']
         );
 
-        $fastForward = $this->epoch->copy()->add(1000, 'seconds');
-        Carbon::setTestNow($fastForward);
-        $this->timestamp($fastForward->timestamp);
+        $fastForward = $this->epoch->copy()->add(1000000, 'milliseconds');
+        $this->setTestNow($fastForward);
         $this->nonce('nonce_6');
         $response = $request->response();
         $this->assertSuccessfulRequest($response);

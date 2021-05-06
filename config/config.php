@@ -10,12 +10,6 @@ return [
      */
     'delegate' => ROTGP\AuthSodium\AuthSodiumDelegate::class,
     
-
-    'database' => [
-
-        'prune_nonces_after_request' => true
-    ],
-    
     'schema' => [
 
         'nonce' => [
@@ -101,6 +95,16 @@ return [
         'signature' => 'Auth-Signature'
     ],
 
+    /**
+     * The environments in which https connections are
+     * to be enforced. Non-https requests in these
+     * environments will fail.
+     */    
+    'secure' => [
+        'environments' => ['production'],
+        'schemes' => ['https']
+    ],
+
     'guard' => [
 
         /**
@@ -109,22 +113,25 @@ return [
          * specified, then the Auth facade itself will
          * be remain untouched, and instead you can use
          * Auth::guard('name'). For example, given the
-         * name: 'authsodium'...
+         * name: 'authsodium', instead of using
+         * Auth::user(), you would use
+         * `Auth::guard('authsodium')->user()`. See more
+         * examples as follows:
          *
          * - Auth::guard('authsodium')->check() // bool
-         * 
+         *
          * - Auth::guard('authsodium')->user() //
          *   object|null
-         * 
+         *
          * - Auth::guard('authsodium')->id() //
          *   int|string|null
-         * 
+         *
          * - Auth::guard('authsodium')->guest() // bool
-         * 
+         *
          * - Auth::guard('authsodium')->authenticateSignature()
          *   // bool
-         * 
-         * - Auth::guard('authsodium')->invalidateUser()
+         *
+         * - Auth::guard('authsodium')->invalidate()
          *   // bool
          *
          */
@@ -201,7 +208,7 @@ return [
     * https://laravel.com/docs/8.x/middleware#terminable-middleware
     *
     * If true, and your server supports terminating
-    * middleware, then Auth::invalidateUser will
+    * middleware, then Auth::invalidate will
     * be called explicitly after the response has been
     * sent to the browser. An attempt will also be made
     * via the `$this->app->terminating` method, however,
@@ -209,42 +216,269 @@ return [
     */
     'log_out_after_request' => true,
 
+
+    /**
+     * Check that the nonce table exists before pruning.
+     * It may not exist in some cases (such as on
+     * terminating the application and before migrations
+     * have been performed). If you're sure the nonces
+     * tables exists, then set to false for a slight
+     * performance optimization.
+     */
+    'check_nonces_table_before_pruning' => true,
+
+    /**
+     * Prune nonces on terminating a request (via
+     * middleware). As per log_out_after_request, this
+     * will only apply if using middleware, and the
+     * server supports it.
+     */
+    'prune_nonces_after_request' => true,
+
+    /**
+     * Prune nonces when the application terminates.
+     * This also includes when run via the cli.
+     */
+    'prune_nonces_on_terminate' => false,
+
     'encoding' => 'base64', // or 'hex'
 
-    'validation_http_error_code' => 422, // some people prefer 400
-    'authorization_failed_http_code' => 401,
+    
+    'http_status_codes' => [
 
-    'error_codes' => [
-        'user_not_found' => 0,
-        'user_identifier_not_found' => 0,
-        'user_public_key_identifier_not_found' => 0,
-        'user_public_key_not_found' => 0,
-        'invalid_signature' => 0,
-        'signature_not_found' => 0,
-        'timestamp_not_found' => 0,
-        'invalid_timestamp_format' => 0,
-        'invalid_timestamp_range' => 0,
-        'unable_to_build_signature_string' => 0,
-        'nonce_not_found' => 0,
-        'nonce_already_exists' => 0,
+        /**
+         * When all the associated metadata has been
+         * provided and validated, but the signature is
+         * invalid.
+         */
+        'unauthorized' => 401,
+
+        /**
+         * User has been blocked because they have
+         * exceeded the allowable amount of failed
+         * authentication requests, as defined in
+         * `throttle.decay`, or because their account is
+         * not currently enabled (as defined by calling
+         * the 'enabled' method on the model, and
+         * receiving a false result).
+         */
+        'forbidden' => 403,
+
+        /**
+         * The user and IP address have attempted too
+         * many failed authenticated requests, and a
+         * period of time must be observed before
+         * attempting again.
+         */
+        'too_many_requests' => 429,
+
+        /**
+         * Some metadata related to the authentication
+         * was incorrect, invalid, or missing. Examples:
+         * - nonce_not_found
+         * - nonce_exceeds_max_length
+         * - timestamp_not_found
+         * - nonce_already_exists
+         * - signature_not_found
+         * - signature_invalid_length
+         * - invalid_timestamp_format
+         * - onValidationError
+         * - user_identifier_not_found
+         * - user_public_key_identifier_not_found
+         * - user_public_key_not_found
+         * - onValidationError
+         * - unable_to_build_signature_string
+         */
+        'validation_error' => 422, // some people prefer 400
+        
+        /**
+         * https://stackoverflow.com/questions/2554778/what-is-the-proper-http-response-to-send-for-requests-that-require-ssl-tls
+         */
+        'secure_protocol_required' => 426
     ],
 
     'timestamp' => [
+        
         /**
-         * the leeway (in seconds), on either side of
-         * the timestamp, in which to allow valid
-         * timestamps. A leeway of 60 equates to a
-         * request timestamp within one hour (before or
-         * after) of the current system timestamp being
-         * accepted. A value of 2 will result in
-         * timestamps only 2 minutes either side of the
-         * current system time being accepted. The
+         * Whether to use milliseconds (true) or seconds
+         * (false) when dealing with timestamps. This
+         * dicates what the end-user should send, and
+         * also what to expect interally when validating
+         * timestamps, and deleting them.
+         */
+        'milliseconds' => true,
+
+        /**
+         * The leeway (in seconds, or milliseconds,
+         * depending on the value of
+         * `use_milliseconds`), on either side of the
+         * timestamp, in which to allow valid
+         * timestamps. A leeway of 300000 milliseconds
+         * (the default) equates to a request timestamp
+         * within 5 minutes (before or after) the
+         * current system timestamp being accepted. The
          * larger the value, the more forgiving the
          * service, but this will also result in more
          * nonces being stored at any given time. This,
          * however, should not be a concern, as nonce
          * deletion is managed automatically.
+         * 
+         * 300000 milliseconds = 300 seconds = 5 minutes
          */ 
-        'leeway' => 300,
-    ]
+        'leeway' => 300000
+    ],
+
+    /**
+     * Configure how failed authentication attempts are
+     * managed.
+     */
+    'throttle' => [
+
+        /**
+         * Whether or not throttling is currently
+         * enabled.
+         */
+        'enabled' => true,
+
+        /**
+         * Whether to use milliseconds (true) or seconds
+         * (false) when dealing with throttles.
+         */
+        'milliseconds' => true,
+
+        /**
+         * The invervals (in seconds, or milliseconds,
+         * according to `throttle.milliseconds`) after
+         * which a new authentication attempt can be
+         * made, after having made an initial failed
+         * one. Zero indicates that an attempt can be
+         * made immediately. Intervals are relative to
+         * the preceding one, so the default would allow
+         * three consecutive immediate attempts, then an
+         * attempt in 1 second, then 3 seconds following
+         * that, etc. After the last attempt (the 8th,
+         * by default) fails, the user is considered to
+         * be blocked.
+         */
+        'decay' => [0, 0, 0, 1000, 3000],
+
+        /**
+         * Throttling will not be applied at all for
+         * these environments.
+         */
+        'exclude_environments' => ['local'],
+
+        /**
+         * If true (the default), will only throttle
+         * automated middleware authentications, not
+         * explicit calls such as
+         * `Auth::authenticateSignature()` or
+         * `Auth::guard('authsodium')->authenticateSignature()`
+         */
+        'middleware_only' => true
+    ],
+
+    'error_codes' => [
+
+        /**
+         * Unable to find the specified Auth-User
+         */
+        'user_not_found' => null,
+
+        /**
+         * The specified Auth-User was found, but they
+         * are not currently enabled
+         */
+        'user_not_enabled' => null,
+
+        /**
+         * No identifier for the auth user was found in
+         * the headers
+         */
+        'user_identifier_not_found' => null,
+
+        /**
+         * No identifier for the auth user's public key
+         * was found in the headers
+         */
+        'user_public_key_identifier_not_found' => null,
+        
+        /**
+         * Unable to locate the public key for the
+         * specified Auth-User
+         */
+        'user_public_key_not_found' => null,
+        
+        /**
+         * All the right information was provided, but
+         * the signature was found to be invalid
+         */
+        'invalid_signature' => null,
+        
+        /**
+         * The signature was not found in the headers of
+         * the request
+         */
+        'signature_not_found' => null,
+
+        /**
+         * The timestamp was not found in the headers of the
+         * request
+         */
+        'timestamp_not_found' => null,
+
+        /**
+         * The timestamp format is invalid - most likely
+         * not an integer
+         */
+        'invalid_timestamp_format' => null,
+
+        /**
+         * The timestamp provided in the headers falls
+         * outside of the acceptable range (defined by `leeway`)
+         */
+        'invalid_timestamp_range' => null,
+        
+        /**
+         * The signature string was unable to be built
+         * (for an indeterminate reason)
+         */
+        'unable_to_build_signature_string' => null,
+        
+        /**
+         * The nonce was not found in the headers of the
+         * request
+         */
+        'nonce_not_found' => null,
+
+        /**
+         * The nonce is too long
+         */
+        'nonce_exceeds_max_length' => null,
+        
+        /**
+         * The nonce already exists for this user
+         */
+        'nonce_already_exists' => null,
+        
+        /**
+         * Too many failed requests have been made for a
+         * user/ip-address, and the length of time
+         * defined by `try_again` must be observed
+         * before trying again
+         */
+        'too_many_requests_please_wait' => null,
+
+        /**
+         * Too many failed requests have been made for a
+         * user/ip-address, and no further attempts are
+         * forbidden.
+         */
+        'too_many_requests_forbidden' => null,
+
+        /**
+         * TLS/SSL secure protocol is not being used 
+         */
+        'secure_protocol_required' => null,
+    ],
 ];

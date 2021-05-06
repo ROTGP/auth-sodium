@@ -3,6 +3,8 @@
 use ROTGP\AuthSodium\Test\IntegrationTestCase;
 use ROTGP\AuthSodium\Test\Controllers\FooController;
 
+use Carbon\Carbon;
+
 class DoNotLogoutAfterGuardRequestTest extends IntegrationTestCase
 {
     protected function customizeSetup()

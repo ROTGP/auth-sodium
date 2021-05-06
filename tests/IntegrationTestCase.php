@@ -16,6 +16,7 @@ use Illuminate\Contracts\Http\Kernel;
 use Faker\Factory as Faker;
 use Carbon\Carbon;
 use Event;
+use Mockery\MockInterface;
 
 abstract class IntegrationTestCase extends TestCase
 {
@@ -39,6 +40,13 @@ abstract class IntegrationTestCase extends TestCase
 
     protected $epoch;
 
+    protected $mock;
+
+    protected $shouldMock = true;
+
+    protected $ipAddress = 1;
+    protected $scheme = 'http';
+
     /**
      * Setup the test environment.
      */
@@ -54,22 +62,77 @@ abstract class IntegrationTestCase extends TestCase
         Event::listen('Illuminate\Auth\Events\*', function ($value, $event) {
             $this->events[] = $event[0];
         });
+        Event::listen('ROTGP\AuthSodium\Events\*', function ($value, $event) {
+            $this->events[] = $event[0];
+        });
         $this->assertUserLoggedOut();
+
+        if (!$this->shouldMock) {
+            return;
+        }
+        $this->resetMock();
+        $this->mockTime();
+    }
+
+    protected function resetMock()
+    {
+        $this->mock = $this->partialMock(config('authsodium.delegate'), function (MockInterface $mock) {
+            return $mock;
+        });
+        $this->mock->shouldAllowMockingProtectedMethods();
+        return $this->mock;
+    }
+
+    protected function mockTime()
+    {
+        $getSystemTime = function($useMilliseconds) {
+            return $useMilliseconds ? intval(Carbon::now()->getPreciseTimestamp(3)) : Carbon::now()->getTimestamp();
+        };
+        
+        $this->mock->shouldReceive('getSystemTime')->andReturnUsing($getSystemTime);
     }
 
     protected function setTime()
     {
-        // https://carbon.nesbot.com/docs/#api-testing
-
         $this->epoch = Carbon::createFromFormat(
             'd/m/Y H:i:s',
             '17/03/2021 18:55:20', // St Patrick's Day
-            config('app.timezone') // UTC
+            'UTC'
         );
         Carbon::setTestNow($this->epoch);
+    }
 
-        // $this->epoch->setTimezone('Asia/Phnom_Penh');
-        // Carbon::setTestNow($this->epoch);
+    protected function setTimestampToNow($offset = 0)
+    {
+        $timestamp = config('authsodium.timestamp.milliseconds', true) ?
+            intval(microtime(true) * 1000) : time();
+        $this->timestamp($timestamp + $offset);
+    }
+    
+    protected function updateTestNow($value, $units = 'seconds')
+    {
+        $this->setTestNow($this->epoch->copy()->add($value, $units), true);
+        // reset signature as it will become invalid
+        $this->signature(null);
+        return $this;
+    }
+
+    protected function setTestNow($value, $updateTimestamp = true)
+    {
+        Carbon::setTestNow($value);
+
+        if ($updateTimestamp) {
+            $this->setTimestampFromDate($value);
+        }
+    }
+
+    protected function setTimestampFromDate($value)
+    {
+        if (config('authsodium.timestamp.milliseconds', true)) {
+            $this->timestamp(intval($value->getPreciseTimestamp(3)));
+        }  else {
+            $this->timestamp($value->getTimestamp());
+        }
     }
 
     protected function cleanupRequestData()
@@ -88,6 +151,30 @@ abstract class IntegrationTestCase extends TestCase
         $this->signed = false;
     }
 
+    protected function ipAddress($value)
+    {
+        $this->ipAddress = $value;
+        $getIpAddress = function($request) {
+            return $this->ipAddress;
+        };
+        
+        $this->mock->shouldReceive('getIpAddress')->andReturnUsing($getIpAddress);
+        
+        return $this;
+    }
+
+    protected function scheme($value)
+    {
+        $this->scheme = $value;
+        $getScheme = function($request) {
+            return $this->scheme;
+        };
+        
+        $this->mock->shouldReceive('getScheme')->andReturnUsing($getScheme);
+        
+        return $this;
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
@@ -96,6 +183,25 @@ abstract class IntegrationTestCase extends TestCase
     public static function faker() {
         if (!isset(self::$fake)) self::$fake = Faker::create();
         return self::$fake;
+    }
+
+    protected function flipSignature($increment = true)
+    {
+        $signature = $this->getSignature();
+        if (is_numeric($signature[0])) {
+            $x = $increment ? 1 : -1;
+            $signature[0] =  ($signature[0] + $x + 10) % 10;
+        } else {
+            $signature[0] = ctype_upper($signature[0]) ? strtolower($signature[0]) : strtoupper($signature[0]);
+        }
+        $this->signature($signature);
+        return $this;
+    }
+
+    protected function withUser($idx)
+    {
+        $this->user($this->users[$idx - 1]);
+        return $this;
     }
 
     protected function asUser($id)
@@ -124,7 +230,7 @@ abstract class IntegrationTestCase extends TestCase
         )
     {
         if (!$timestamp) {
-            $timestamp = $this->epoch->timestamp;
+            $timestamp = intval($this->epoch->getPreciseTimestamp(3));
         }
         return $this->method($method)
             ->url($url)
@@ -164,7 +270,20 @@ abstract class IntegrationTestCase extends TestCase
         $this->assertArrayHasKey('http_status_code', $json);
         $this->assertEquals(401, $json['http_status_code']);
         $this->assertArrayHasKey('http_status_message', $json);
-        $this->assertEquals("Unauthorized", $json['http_status_message']);
+        $this->assertEquals('Unauthorized', $json['http_status_message']);
+    }
+
+    protected function assertTooManyRequests($response, $tryAgain)
+    {
+        $response->assertStatus(429);
+        $json = $this->decodeResponse($response);
+        $this->assertArrayHasKey('http_status_code', $json);
+        $this->assertEquals(429, $json['http_status_code']);
+        $this->assertArrayHasKey('http_status_message', $json);
+        $this->assertEquals('Too Many Requests', $json['http_status_message']);
+        $this->assertArrayHasKey('error_message', $json);
+        $this->assertEquals('Too many requests please wait', $json['error_message']);
+        $this->assertEquals($tryAgain, $json['try_again']);
     }
 
     protected function assertValidationError($response, $error)
@@ -241,7 +360,8 @@ abstract class IntegrationTestCase extends TestCase
             $user['model'] = User::create([
                 'name' => $user['name'],
                 'email' => $user['email'],
-                'public_key' => $user['public_key']
+                'public_key' => $user['public_key'],
+                'enabled' => true
             ]);
             $this->users[] = $user;
         }
@@ -327,6 +447,12 @@ abstract class IntegrationTestCase extends TestCase
         $params['timestamp'] = $this->getTimestamp();
         $params['nonce'] = $this->nonce;
         return $params;
+    }
+
+    public function new()
+    {
+        $this->cleanupRequestData();
+        return $this;
     }
 
     public function getSignatureString()

@@ -8,23 +8,16 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Exception;
 
 abstract class AuthSodiumUser extends Model implements Authenticatable
-{    
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'public_key'
-    ];
-
+{
     public function nonces()
     {
         return $this->hasMany('ROTGP\AuthSodium\Models\Nonce');
     }
 
+    public function throttle()
+    {
+        return $this->hasOne('ROTGP\AuthSodium\Models\Throttle');
+    }
 
     // implement Illuminate\Contracts\Auth\Authenticatable methods
 
@@ -65,7 +58,7 @@ abstract class AuthSodiumUser extends Model implements Authenticatable
      */
     public function getRememberToken()
     {
-        // not supported
+        throw new Exception('not supported');
     }
 
     /**
@@ -76,7 +69,7 @@ abstract class AuthSodiumUser extends Model implements Authenticatable
      */
     public function setRememberToken($value)
     {
-        // not supported
+        throw new Exception('not supported');
     }
 
     /**
@@ -86,6 +79,6 @@ abstract class AuthSodiumUser extends Model implements Authenticatable
      */
     public function getRememberTokenName()
     {
-        // not supported
+        throw new Exception('not supported');
     }
 }

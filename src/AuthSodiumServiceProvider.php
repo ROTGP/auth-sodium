@@ -6,6 +6,12 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Router;
 
+use ROTGP\AuthSodium\AuthSodiumDelegate;
+use ROTGP\AuthSodium\Console\PruneNonces;
+
+use ROTGP\AuthSodium\Models\Nonce;
+use ROTGP\AuthSodium\Models\Throttle;
+
 use Config;
 use Auth;
 
@@ -18,9 +24,12 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
-        $delegateNS = config('authsodium.delegate');
-        $delegate = app()->make($delegateNS);
-        $this->app->instance($delegateNS, $delegate);
+        \DB::flushQueryLog();
+        
+        $delegateNamespace = config('authsodium.delegate', AuthSodiumDelegate::class);
+        $delegate = authSodium();
+        
+        $this->app->instance($delegateNamespace, $delegate);
 
         $middlewareName = $delegate->middlewareName();
         $middlewareGroup = $delegate->middlewareGroup();
@@ -35,7 +44,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * to the beginning of the array.
          */
         if ($usingMiddleware)
-            $kernel->prependToMiddlewarePriority($delegateNS);
+            $kernel->prependToMiddlewarePriority($delegateNamespace);
+            
 
         /**
          * This will run the middleware ONLY if the
@@ -44,7 +54,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * `Route::resource('foos', FooController::class)->middleware('authsodium');`
          */
         if ($middlewareName)
-            $router->aliasMiddleware($middlewareName, $delegateNS);
+            $router->aliasMiddleware($middlewareName, $delegateNamespace);
         
         /**
          * This adds the AuthSodium middleware to the
@@ -59,7 +69,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */
 
         if ($middlewareGroup)
-            $router->pushMiddlewareToGroup($middlewareGroup, $delegateNS);
+            $router->pushMiddlewareToGroup($middlewareGroup, $delegateNamespace);
 
         /**
          * This will run the AuthSodium middleware on
@@ -69,7 +79,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * user registration).
          */
         if ($useGlobalMiddleware)
-            $kernel->pushMiddleware($delegateNS);
+            $kernel->pushMiddleware($delegateNamespace);
 
         /**
          * Auth::viaRequest is a closure - it will not
@@ -81,7 +91,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * It will NOT get called just because a route
          * is using the authsodium middleware.
          */
-        $guardName = authSodium()->guardName();
+        $guardName = $delegate->guardName();
         if ($guardName) {
             
             config(['auth.guards.' . $guardName => ['driver' => $guardName]]);
@@ -94,8 +104,25 @@ class AuthSodiumServiceProvider extends ServiceProvider
             // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/GuardHelpers.php#L81
                 
             Auth::extend($guardName, function ($app, $name) use ($delegate) {
-                return $delegate;
+                return authSodium();
             });
+
+            /**
+             * @TODO not really sure about this - I
+             * don't feel comfortable with events having a
+             * guard name of 'web' when no custom guard
+             * name is set - it seems weird. 
+             *
+             * Auth::setDefaultDriver($guardName);
+             *
+             * `Auth::getDefaultDriver()`
+             *
+             * https://stackoverflow.com/a/51400553/1985175
+             * "The default driver will now be set for
+             * all incoming request from either the api
+             * routes file or from within an api group."
+             * - ok so it's like global?
+             */
         
         /**
          *  For a consistent API, if we're not using a
@@ -104,16 +131,15 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */ 
         } else {
 
-            Auth::macro('authenticateSignature', function () {
+            Auth::macro('authenticateSignature', function () use ($delegate) {
                 return authSodium()->authenticateSignature();
             });
     
-            Auth::macro('invalidateUser', function () {
+            Auth::macro('invalidate', function () {
                 $this->user = null;
             });
         }
         
-
         if ($this->app->runningInConsole()) {
 
             $this->loadMigrationsFrom( __DIR__.'/../migrations/3000_01_01_000000_create_auth_sodium_tables.php');
@@ -128,17 +154,22 @@ class AuthSodiumServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../config/config.php' => config_path('authsodium.php'),
             ], 'config');
+
+            $this->commands([
+                PruneNonces::class,
+            ]);
         }
 
         $this->app->terminating(function () use ($delegate) {
             if (config('authsodium.log_out_after_request', true)) {
-                $delegate->invalidateUser();
+                authSodium()->invalidate();
             }
 
-            if (config('authsodium.database.prune_nonces_after_request', true)) {
-                $delegate->pruneNonces();
+            if (config('authsodium.prune_nonces_on_terminate', true)) {
+                authSodium()->pruneNonces();
             }
-         });
+            // dd(\DB::getQueryLog());
+        });
     }
 
     public function register()

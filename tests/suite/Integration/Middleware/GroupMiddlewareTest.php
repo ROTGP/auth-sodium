@@ -18,13 +18,11 @@ class GroupMiddlewareTest extends IntegrationTestCase
     {
         $response = $this->unsigned()->request()->response();
         $this->assertValidationError($response, 'signature_not_found');
-        $this->assertUserLoggedOut();
     }
 
     public function test_that_signed_request_to_resource_protected_by_group_middleware_succeeds()
     {
         $response = $this->signed()->request()->response();
         $this->assertSuccessfulRequest($response);
-        $this->assertUserLoggedOut();
     }
 }

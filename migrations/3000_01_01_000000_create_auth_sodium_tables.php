@@ -13,22 +13,19 @@ class CreateAuthSodiumTables extends Migration
      */
     public function up()
     {
-        Schema::create('nonces', function (Blueprint $table) {  
+        // @TODO why are we doing this? 
+        authSodium()->validateConfig();
 
-            $userModel = authSodium()->authUserModel();
-            $userForeignKey = $userModel->getForeignKey();
-            $usersTable = $userModel->getTable();
-            $userKeyName = $userModel->getKeyName();
+        $userModel = authSodium()->authUserModel();
+        $userForeignKey = $userModel->getForeignKey();
+        $usersTable = $userModel->getTable();
+        $userKeyName = $userModel->getKeyName();
+
+        Schema::create('authsodium_nonces', function (Blueprint $table) use ($userForeignKey, $usersTable, $userKeyName) {
             
             $table->id();
-            $table->string('value', config('authsodium.schema.nonce.length', 44));
-            
-            /**
-             * The timestamp for when the request was
-             * made (and the nonce was used), which is
-             * assumed to be in the timezone of
-             */
-            $table->timestamp('timestamp');
+            $table->string('value', authSodium()->getNonceMaxLength());
+            $table->unsignedBigInteger('timestamp');
 
             // foreign key for user
             $table->unsignedBigInteger($userForeignKey);
@@ -45,6 +42,27 @@ class CreateAuthSodiumTables extends Migration
             }
             $table->unique($uniqueConstraints);
         });
+
+        Schema::create('authsodium_throttles', function (Blueprint $table)  use ($userForeignKey, $usersTable, $userKeyName) {
+            
+            $table->id();
+
+            // foreign key for user
+            $table->unsignedBigInteger($userForeignKey);
+            $table
+                ->foreign($userForeignKey)
+                ->references($userKeyName)
+                ->on($usersTable)
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+            
+            $table->string('ip_address', 45);
+            $table->integer('attempts')->default(0);
+            $table->timestamp('try_again')->nullable();
+            $table->boolean('blocked');
+
+            $table->unique([$userForeignKey, 'ip_address']);
+        });
     }
 
     /**
@@ -54,6 +72,7 @@ class CreateAuthSodiumTables extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('nonces');
+        Schema::dropIfExists('authsodium_throttles');
+        Schema::dropIfExists('authsodium_nonces');
     }
 }

@@ -9,15 +9,21 @@ use Exception;
 class Nonce extends Model
 {  
     /**
-     * The attributes that are mass assignable.
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'authsodium_nonces';
+
+    /**
+     * The attributes that are guarded. As this is the
+     * inverse of fillable, we're essentially allowing
+     * any field to be mass assignable. This is safe as
+     * the input will always be system generated.
      *
      * @var array
      */
-    protected $fillable = [
-        'user_id',
-        'value',
-        'timestamp'
-    ];
+    protected $guarded = [];
 
     public $timestamps = false;
 
@@ -41,10 +47,5 @@ class Nonce extends Model
     public function scopeForUserIdentifier($query, $value)
     {
         return $query->where($this->foreignKeyName(), '=', $value);
-    }
-
-    public function scopeBetweenTimestamps($query, $start, $end)
-    {
-        return $query->whereBetween('timestamp', [$start, $end]);
     }
 }

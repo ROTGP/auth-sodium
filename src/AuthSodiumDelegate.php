@@ -6,16 +6,26 @@ use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Auth\Events\Authenticated;
+use Illuminate\Auth\Events\Attempting;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Support\Facades\Schema;
 
 use Symfony\Component\HttpFoundation\Response;
 
 use ROTGP\AuthSodium\Models\Nonce;
+use ROTGP\AuthSodium\Models\Throttle;
+
+use ROTGP\AuthSodium\Events\Invalidated;
+use ROTGP\AuthSodium\Events\Throttled;
+use ROTGP\AuthSodium\Events\Blocked;
 
 use Auth;
 use Closure;
+use Request;
 use Exception;
-use Carbon\Carbon;
+
+use DateTime;
+use DateTimeZone;
 
 class AuthSodiumDelegate implements Guard
 {
@@ -110,12 +120,18 @@ class AuthSodiumDelegate implements Guard
      *
      * @return void
      */
-    public function invalidateUser()
+    public function invalidate()
     {
+        $user = $this->getUser();
+        
         if ($this->isGuard()) {
             $this->user = null;
         } else {
-            Auth::invalidateUser();
+            Auth::invalidate();
+        }
+        
+        if ($user) {
+            $this->fireInvalidatedEvent($user);
         }
     }
 
@@ -135,6 +151,74 @@ class AuthSodiumDelegate implements Guard
         }
     }
 
+    /**
+     * Fire the Invalidated event for the guard/user.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @return void
+     */
+    protected function fireInvalidatedEvent($user)
+    {
+        event(new Invalidated(
+            $this->guardName() ?? Auth::getDefaultDriver(), $user
+        ));
+    }
+
+    /**
+     * Fire the Attempting event for the guard/user.
+     *
+     * @param  array  $credentials
+     * @return void
+     */
+    protected function fireAttemptingEvent($credentials)
+    {
+        event(new Attempting(
+            $this->guardName() ?? Auth::getDefaultDriver(), $credentials, false
+        ));
+    }
+    
+    /**
+     * Fire the Invalidated event for the guard/user.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  array  $credentials
+     * @return void
+     */
+    protected function fireFailedEvent($user, $credentials)
+    {
+        event(new Failed(
+            $this->guardName() ?? Auth::getDefaultDriver(), $user, $credentials
+        ));
+    }
+
+    /**
+     * Fire the Throttled event for the guard/user/throttle.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  \ROTGP\AuthSodium\Models\Throttle  $throttle
+     * @return void
+     */
+    protected function fireThrottledEvent($user, $throttle)
+    {
+        event(new Throttled(
+            $this->guardName() ?? Auth::getDefaultDriver(), $user, $throttle
+        ));
+    }
+
+    /**
+     * Fire the Blocked event for the guard/user/throttle.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  \ROTGP\AuthSodium\Models\Throttle  $throttle
+     * @return void
+     */
+    protected function fireBlockedEvent($user, $throttle)
+    {
+        event(new Blocked(
+            $this->guardName() ?? Auth::getDefaultDriver(), $user, $throttle
+        ));
+    }
+    
     /**
      * If there is no user currently authenticated, then
      * try to authenticate one, based on the current
@@ -167,20 +251,53 @@ class AuthSodiumDelegate implements Guard
     public function terminate($request, $response)
     {
         if (config('authsodium.log_out_after_request', true)) {
-            $this->invalidateUser();
+            $this->invalidate();
+        }
+
+        if (config('authsodium.prune_nonces_after_request', true)) {
+            $this->pruneNonces();
         }
     }
 
+    /**
+     * Delete nonces that are older than the leeway
+     * period, and return the number deleted.
+     */
     public function pruneNonces()
     {
-        if (!Schema::hasTable('nonces')) {
+        if (config('authsodium.check_nonces_table_before_pruning', true) && 
+            !Schema::hasTable('authsodium_nonces')) {
             return;
         }
         $leeway = $this->getTimestampLeeway();
-        $cutoff = Carbon::now($this->getAppTimezone())->subtract($leeway, 'seconds')->timestamp;
-        Nonce::where('timestamp', '<', $cutoff)->delete();
+        $cutoff = $this->getSystemTime($this->useTimestampMilliseconds()) - $leeway;
+        return Nonce::where('timestamp', '<', $cutoff)->delete();
     }
 
+    /**
+     * @TODO
+     */
+    public function clearThrottle($authUserIdentifier, $ipAddress)
+    {
+        if (!Schema::hasTable('authsodium_throttles') || 
+            ($authUserIdentifier === null && $ipAddress === null)
+            ) {
+            return false;
+        }
+
+        $query = Throttle::query();
+
+        if ($authUserIdentifier) {
+            $query->forUserIdentifier($authUserIdentifier);
+        }
+
+        if ($ipAddress) {
+            $query->where('ip_address', $ipAddress);
+        }
+
+        return $query->delete();
+    }
+    
     /**
      * Return the method of the incoming request. Ie,
      * get, put, post or delete. We use lowercase as
@@ -235,12 +352,7 @@ class AuthSodiumDelegate implements Guard
 
     protected function getTimestampLeeway()
     {
-        return config('authsodium.timestamp.leeway', 300);
-    }
-
-    protected function getAppTimezone()
-    {
-        return config('app.timezone', 'UTC');
+        return config('authsodium.timestamp.leeway', 300000);
     }
 
     protected function getUniquePerTimestamp()
@@ -248,7 +360,83 @@ class AuthSodiumDelegate implements Guard
         return config('authsodium.schema.nonce_unique_per_timestamp', false);
     }
 
-   /**
+    protected function useTimestampMilliseconds()
+    {
+        return config('authsodium.timestamp.milliseconds', true);
+    }
+
+    protected function useThrottleMilliseconds()
+    {
+        return config('authsodium.throttle.milliseconds', false);
+    }
+
+    /**
+     * Returns milliseconds (or seconds, depending on
+     * config) since midnight January 1st 1970 (UTC)
+     */
+    public function getSystemTime($useMilliseconds)
+    {
+        return $useMilliseconds ? intval(microtime(true) * 1000) : time();;
+    }
+
+    /**
+     * Validate the package's user-defined config, handy
+     * for running prior to migrations, prior to
+     * code-execution, or from the artisan CLI. 
+     */
+    public function validateConfig($throwExceptions = true)
+    {
+        $exceptions = [];
+        
+        // check OS support for big integers
+        $is64Bit = PHP_INT_SIZE === 8;
+        $useMilliseconds = $this->useTimestampMilliseconds();
+        
+        if (!$is64Bit && $useMilliseconds) {
+            $exceptions[] = 'millisecond timestamps should not be used on 32 bit systems';
+        }
+
+        // check that leeway is not too permissive
+        $leeway = config('authsodium.timestamp.leeway');
+        if (!$this->isValidInt($leeway)) {
+            $exceptions[] = "leeway value of: $leeway is invalid";
+        }
+        
+        $leewayInSeconds = $useMilliseconds ? ($leeway / 1000) : $leeway;
+
+        if ($leewayInSeconds > 3600) {
+            $leewayInHours = number_format($leewayInSeconds / 3600, 5, '.', '');
+            $exceptions[] = "leeway should not exceed one hour (currently $leewayInHours hours)";
+        }
+
+        // check that model is valid
+        $model = config('authsodium.user.model');
+        
+        if (empty($model)) {
+            $exceptions[] = 'auth user model not defined';
+        } else if (!class_exists($model)) {
+            $exceptions[] = 'auth user model class: "' . $model . '" not found';
+        } else if (!is_a($model, Model::class, true)) {
+            $exceptions[] = 'auth user model class: "' . $model . '" must extend ' . Model::class;
+        } else if (!is_a($model, Authenticatable::class, true)) {
+            $exceptions[] = 'auth user model class: "' . $model . '" must implement ' . Authenticatable::class;
+        }
+
+        // @TODO what other config should be validated?
+
+        if ($throwExceptions && count($exceptions)) {
+            throw new Exception('Invalid Auth Sodium configuration - ' . $exceptions[0]);
+        }
+        
+        return count($exceptions) ? $exceptions : true;
+    }
+
+    public function getNonceMaxLength()
+    {
+        return config('authsodium.schema.nonce.length', 44);
+    }
+
+    /**
      * Validate the existence, length etc of signature,
      * not whether it's value is valid;
      */
@@ -259,14 +447,16 @@ class AuthSodiumDelegate implements Guard
             return null;
         }
 
+        if (strlen($value) > $this->getNonceMaxLength()) {
+            $this->onValidationError('nonce_exceeds_max_length');
+            return null;
+        }
+
         if (!$timestamp) {
             $this->onValidationError('timestamp_not_found');
             return null;
         }
 
-        $leeway = $this->getTimestampLeeway();
-        $start = Carbon::now($this->getAppTimezone())->subtract($leeway, 'seconds');
-        $end = Carbon::now($this->getAppTimezone())->add($leeway, 'seconds');
         $authIdentifier = $user->getAuthIdentifier();
 
         $query = Nonce::forUserIdentifier($authIdentifier)
@@ -275,8 +465,6 @@ class AuthSodiumDelegate implements Guard
         if ($this->getUniquePerTimestamp()) {
             $query->where('timestamp', $timestamp);
         }
-
-        // dd($query->toSql(), $query->getBindings());
         
         $found = $query->first();
         
@@ -307,6 +495,19 @@ class AuthSodiumDelegate implements Guard
         return $value;
     }
 
+    /**
+     * Validate that a value is a valid int, whether it
+     * be an int, a float, a string (empty or
+     * otherwise), or null.
+     */
+    protected function isValidInt($value)
+    {
+        $value = strval($value);
+        return ctype_digit($value) &&
+            $value >= 0 &&
+            $value <= PHP_INT_MAX;
+    }
+
     protected function validateTimestamp($value)
     {
         if (empty($value)) {
@@ -314,20 +515,21 @@ class AuthSodiumDelegate implements Guard
             return null;
         }
         
-        if (!ctype_digit($value) || $value > PHP_INT_MAX) {
+        if (!$this->isValidInt($value)) {
             $this->onValidationError('invalid_timestamp_format');
             return null;
         }
 
+        $value = intval($value);
         $leeway = $this->getTimestampLeeway();
-        $now = Carbon::now($this->getAppTimezone());
-        $requestTimestamp = Carbon::createFromTimestamp($value);
-        $difference = abs($now->diffInSeconds($requestTimestamp));
+        $now = $this->getSystemTime($this->useTimestampMilliseconds());
+        $difference = abs($now - $value);
+        
         if ($difference > $leeway) {
             $this->onValidationError('invalid_timestamp_range');
             return null;
         }
-
+        
         return $value;
     }
 
@@ -349,7 +551,7 @@ class AuthSodiumDelegate implements Guard
         if ($validate) {
             $value = $this->validateTimestamp($value);
         }
-       
+        
         return $value;
     }
 
@@ -563,10 +765,20 @@ class AuthSodiumDelegate implements Guard
     protected function validationErrorCode()
     {
         return config(
-            'authsodium.validation_error_code',
+            'authsodium.http_status_codes.validation_error',
             422
         );
     }
+
+    protected function secureProtocolRequiredCode()
+    {
+        return config(
+            'authsodium.http_status_codes.secure_protocol_required',
+            426
+        );
+    }
+
+    
 
     /**
      * All the required information was provided, but
@@ -575,8 +787,32 @@ class AuthSodiumDelegate implements Guard
     protected function authorizationFailedCode()
     {
         return config(
-            'authsodium.authorization_failed_http_code',
+            'authsodium.http_status_codes.unauthorized',
             401
+        );
+    }
+
+    /**
+     * All the required information was provided, but
+     * the signature verification failed.
+     */
+    protected function tooManyRequestsCode()
+    {
+        return config(
+            'authsodium.http_status_codes.too_many_requests',
+            429
+        );
+    }
+
+    /**
+     * All the required information was provided, but
+     * the signature verification failed.
+     */
+    protected function forbiddenCode()
+    {
+        return config(
+            'authsodium.http_status_codes.forbidden',
+            403
         );
     }
 
@@ -629,15 +865,22 @@ class AuthSodiumDelegate implements Guard
             return $model::firstWhere($this->userUniqueIdentifier(), $uniqueIdentifier);
         });
 
-        if ($user === null || !$user) {
+        if (!$user) {
             $this->onValidationError('user_not_found');
             return null;
+        }
+
+        if (method_exists($user, 'enabled') && $user->enabled() !== true) {
+            $this->errorResponse(
+                'user_not_enabled',
+                $this->authorizationFailedCode(),
+            );
         }
         
         return $user;
     }
 
-    public function buildSignatureString($request, $user)
+    protected function buildSignatureString($request, $user)
     {
         $toSign = [];
         $toSign['method'] = $this->getSignatureMethod($request);
@@ -663,8 +906,167 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
-    public function validateRequest($request, $isMiddleware)
+    // https://stackoverflow.com/a/41769505/1985175
+    protected function getIpAddress($request){
+        foreach ([
+            'HTTP_CLIENT_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_FORWARDED',
+            'HTTP_X_CLUSTER_CLIENT_IP',
+            'HTTP_FORWARDED_FOR',
+            'HTTP_FORWARDED',
+            'REMOTE_ADDR'
+            ] as $key){
+            if (array_key_exists($key, $_SERVER) === true){
+                foreach (explode(',', $_SERVER[$key]) as $ip){
+                    $ip = trim($ip);
+                    if (filter_var(
+                        $ip,
+                        FILTER_VALIDATE_IP,
+                        FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+                        ) !== false){
+                        return $ip;
+                    }
+                }
+            }
+        }
+         // return server ip when no client ip found
+        return $request->ip();
+    }
+
+    /**
+     * Checks if a throttle exists for the user and ip
+     * address pertaining to the request. 
+     *
+     * If none exists then returns immediately.
+     *
+     * If one exists, then we check that the current
+     * time is less than or equal to it's try_again
+     * value.
+     *  - If it's not, then we simply abort with a
+     * message
+     *  - If it is, then we return.
+     */
+    protected function preThrottle($user, $throttle, $now, $decayValues)
     {
+        /**
+         * If no throttle exist then there's no
+         * need to continue.
+         */
+        if (!$throttle) {
+            return;
+        }
+        
+        // check if blocked entirely
+        if ($throttle->blocked) {
+            $this->throttleExhausted();
+        }
+
+        if ($now >= $throttle->try_again) {
+            return;
+        }
+
+        $this->fireThrottledEvent($user, $throttle);
+        
+        $this->errorResponse(
+            'too_many_requests_please_wait',
+            $this->tooManyRequestsCode(),
+            ['try_again' => $throttle->try_again]
+        );
+    }
+
+    protected function shouldThrottle()
+    {
+        /**
+         * If not middleware and we're only running on
+         * middleware, then return false.
+         */
+        if (!$this->isMiddleware && config('authsodium.throttle.middleware_only', true)) {
+            return false;
+        }
+        
+        $enabled = config('authsodium.throttle.enabled', true);
+
+        $excluded = in_array(
+            app()->environment(), 
+            config('authsodium.throttle.exclude_environments', ['local'])
+        );
+
+        return $enabled && !$excluded;
+    }
+
+    protected function throttleExhausted()
+    {
+        $this->errorResponse(
+            'too_many_requests_forbidden',
+            $this->forbiddenCode(),
+        );
+    }
+
+    protected function getThrottleDecay()
+    {
+        return config('authsodium.throttle.decay', [0, 0, 0, 1000, 3000]);
+    }
+
+    protected function getSecureEnvironments()
+    {
+        return config('authsodium.secure.environments', ['production']);
+    }
+
+    protected function postThrottle($user, $throttle, $decayValues)
+    {
+        if ($throttle->id) {
+            $throttle->attempts++;
+        }
+
+        $decay = $decayValues[$throttle->attempts] ?? 0;
+        $throttle->try_again += $decay;
+        if ($throttle->attempts >= count($decayValues)) {
+            $throttle->blocked = true;
+        }
+        
+        $throttle->save();
+        
+        if ($throttle->blocked) {
+            $this->fireBlockedEvent($user, $throttle);
+            $this->throttleExhausted();
+        }
+    }
+
+    protected function getScheme($request)
+    {
+        return $request->getScheme();
+    }
+
+    protected function checkSecure($request)
+    {
+        if (!in_array(
+            strtolower(app()->environment()),
+            array_map('strtolower', $this->getSecureEnvironments()))
+            ) {
+            return;
+        }
+        
+        $acceptableSchemes = config('authsodium.secure.schemes', ['https']);
+        if (in_array(
+            $this->getScheme($request),
+            array_map('strtolower', $acceptableSchemes))
+            ) {
+            return;
+        }
+
+        // https://stackoverflow.com/questions/2554778/what-is-the-proper-http-response-to-send-for-requests-that-require-ssl-tls
+        
+        $this->errorResponse(
+            'secure_protocol_required',
+            $this->secureProtocolRequiredCode()
+        );
+    }
+
+    protected function validateRequest($request, $isMiddleware)
+    {
+        $this->checkSecure($request);
+        \DB::enableQueryLog();
         $this->isMiddleware = $isMiddleware;
         if ($this->getUser()) {
             return true;
@@ -684,11 +1086,33 @@ class AuthSodiumDelegate implements Guard
         if (!$publicKey) {
             return false;
         }
-
+        
         $message = $this->buildSignatureString($request, $user);
         if (!$message) {
             return false;
         }
+        
+        $authUserIdentifier = $user->getAuthIdentifier();
+        $shouldThrottle = $this->shouldThrottle();
+        
+        if ($shouldThrottle) {
+            $ipAddress = $this->getIpAddress($request);
+            $now = $this->getSystemTime($this->useThrottleMilliseconds());
+            $decayValues = $this->getThrottleDecay();
+            $throttle = Throttle::forUserIdentifier($authUserIdentifier)
+                ->where('ip_address', $ipAddress)
+                ->first();
+            $this->preThrottle($user, $throttle, $now, $decayValues);
+        }
+        
+        
+        $credentials = [
+            'public_key' => $this->encode($publicKey),
+            'message' => $message,
+            'signature' => $this->encode($signatureToVerify)
+        ];
+
+        $this->fireAttemptingEvent($credentials);
         
         $signatureIsValid = sodium_crypto_sign_verify_detached(
             $signatureToVerify,
@@ -697,7 +1121,20 @@ class AuthSodiumDelegate implements Guard
         );
 
         if (!$signatureIsValid) {
-            $this->invalidateUser();
+
+            if ($shouldThrottle) {
+                $this->postThrottle($user, $throttle ?? new Throttle([
+                    'user_id' => $authUserIdentifier,
+                    'ip_address' => $ipAddress,
+                    'attempts' => 0,
+                    'try_again' => $this->getSystemTime($this->useThrottleMilliseconds()),
+                    'blocked' => false
+                ]), $decayValues);
+            }
+            
+            $this->fireFailedEvent($user, $credentials);
+
+            $this->invalidate();
             if ($this->abortOnInvalidSignature()) {
                 $this->errorResponse(
                     'invalid_signature',
@@ -711,10 +1148,19 @@ class AuthSodiumDelegate implements Guard
         $nonce = $this->getSignatureNonce($request, $user, false, null);
         $timestamp = (int) $this->getSignatureTimestamp($request, false);
         Nonce::create([
-            'user_id' => $user->getAuthIdentifier(),
+            'user_id' => $authUserIdentifier,
             'value' => $nonce,
             'timestamp' => $timestamp
         ]);
+
+        /**
+         * Authentication was successful, so delete all
+         * failed attempts for this user and address
+         */ 
+        if ($shouldThrottle && $throttle) {
+            Throttle::forUserIdentifier($authUserIdentifier)
+                ->where('ip_address', $this->getIpAddress($request))->delete();
+        }
 
         $this->setUser($user);
         
@@ -765,12 +1211,12 @@ class AuthSodiumDelegate implements Guard
     protected function onValidationError($errorKey)
     {
         if ($this->abortOnInvalidSignature()) {
-            $httpStatusCode = config('authsodium.validation_http_error_code', 422);
+            $httpStatusCode = $this->validationErrorCode();
             $this->errorResponse($errorKey, $httpStatusCode);
         }
     }
 
-    protected function errorResponse($errorKey, $httpStatusCode = 401, $extras = []) : void
+    protected function errorResponse($errorKey, $httpStatusCode, $extras = []) : void
     {
         if (!is_int($httpStatusCode)) {
             throw new Exception('HTTP status code is required');

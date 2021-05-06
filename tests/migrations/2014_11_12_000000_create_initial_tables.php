@@ -18,6 +18,7 @@ class CreateInitialTables extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('public_key');
+            $table->boolean('enabled');
             $table->timestamps();
         });
 

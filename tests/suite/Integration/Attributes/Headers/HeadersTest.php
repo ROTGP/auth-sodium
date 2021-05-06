@@ -5,7 +5,7 @@ use ROTGP\AuthSodium\Test\Controllers\FooController;
 
 use Carbon\Carbon;
 
-class HeaderTest extends IntegrationTestCase
+class HeadersTest extends IntegrationTestCase
 {
     protected function customizeSetup()
     {
@@ -26,7 +26,6 @@ class HeaderTest extends IntegrationTestCase
         $this->headers($headers);
         $response =  $request->response();
         $this->assertUnauthorized($response);
-        $this->assertUserLoggedOut();
     }
 
     /**
@@ -41,6 +40,5 @@ class HeaderTest extends IntegrationTestCase
         $this->headers($headers);
         $response =  $request->response();
         $this->assertValidationError($response, 'user_not_found');
-        $this->assertUserLoggedOut();
     }
 }

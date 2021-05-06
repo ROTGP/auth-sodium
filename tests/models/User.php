@@ -15,6 +15,7 @@ class User extends AuthSodiumUser
         'name',
         'email',
         'public_key',
+        'enabled'
     ];
 
     /**
@@ -23,4 +24,9 @@ class User extends AuthSodiumUser
      * @var array
      */
     protected $hidden = [];
+
+    public function enabled()
+    {
+        return boolval($this->enabled);
+    }
 }
