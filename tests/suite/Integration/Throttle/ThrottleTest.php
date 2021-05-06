@@ -13,10 +13,17 @@ class ThrottleTest extends IntegrationTestCase
         $this->router()
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
+
+        config([
+            'authsodium.throttle.milliseconds' => false,
+            'authsodium.throttle.decay' => [0, 0, 0, 1, 3]
+        ]);
     }
 
     public function test_that_requests_from_user_are_throttled_and_eventually_blocked()
     {
+        config(['authsodium.throttle.decay' => [0, 0, 0, 1, 3]]);
+
         $userId = 1;
 
         // successful request

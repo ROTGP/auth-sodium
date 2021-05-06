@@ -13,8 +13,6 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
         $this->router()
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
-
-            config(['authsodium.throttle.milliseconds' => true]);
     }
 
     public function test_that_requests_from_user_are_throttled_and_eventually_blocked_milliseconds()
@@ -70,7 +68,7 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
         $response = $this->response();
         $this->assertUnauthorized($response);
         $this->assertEquals(Throttle::first()->attempts, 3);
-        $this->assertEquals(Throttle::first()->try_again, 1616007320001);
+        $this->assertEquals(Throttle::first()->try_again, 1616007321000);
         
         /**
          * We're consuming our fourth attempt. The value
@@ -78,8 +76,8 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
          * our fourth decay value is one.
          */
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
-        $this->assertEquals(Throttle::first()->try_again, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
+        $this->assertEquals(Throttle::first()->try_again, 1616007321000);
         
         /**
          * Try a bunch of times - throttle won't get
@@ -89,19 +87,19 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
          * try_again time (1616007321).
          */
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
 
         /**
          * Advance one second (from epoch) such that
@@ -110,10 +108,10 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
          * (1616007321). So now, the request will be
          * assessed, and rejected. The 
          */
-        $response = $this->updateTestNow(1, 'millisecond')->flipSignature()->response();
+        $response = $this->updateTestNow(1000, 'milliseconds')->flipSignature()->response();
         $this->assertUnauthorized($response);
         $this->assertEquals(Throttle::first()->attempts, 4);
-        $this->assertEquals(Throttle::first()->try_again, 1616007320004);
+        $this->assertEquals(Throttle::first()->try_again, 1616007324000);
         
 
         /**
@@ -124,19 +122,19 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
          * try_again time (1616007324).
          */
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320004);
+        $this->assertTooManyRequests($response, 1616007324000);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320004);
+        $this->assertTooManyRequests($response, 1616007324000);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320004);
+        $this->assertTooManyRequests($response, 1616007324000);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320004);
+        $this->assertTooManyRequests($response, 1616007324000);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320004);
+        $this->assertTooManyRequests($response, 1616007324000);
         
         /**
          * Advance three seconds (from epoch) such that
@@ -145,37 +143,37 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
          * (1616007324). Once again, it will be rejected
          * and the throttle untouched.
          */
-        $response = $this->updateTestNow(3, 'milliseconds')->flipSignature()->response();
-        $this->assertTooManyRequests($response, 1616007320004);
+        $response = $this->updateTestNow(3000, 'milliseconds')->flipSignature()->response();
+        $this->assertTooManyRequests($response, 1616007324000);
         $this->assertEquals(Throttle::first()->attempts, 4);
-        $this->assertEquals(Throttle::first()->try_again, 1616007320004);
+        $this->assertEquals(Throttle::first()->try_again, 1616007324000);
         
 
         /**
          * Advance five seconds (from epoch) such that
          * system/request time (1616007325) is one
          * second more than the required try_again time
-         * (1616007320004). It should be ...
+         * (1616007324000). It should be ...
          */
-        $response = $this->updateTestNow(5, 'milliseconds')->flipSignature()->response();
+        $response = $this->updateTestNow(5000, 'milliseconds')->flipSignature()->response();
         $this->assertForbidden($response);
         $this->assertEquals(Throttle::first()->attempts, 5);
-        $this->assertEquals(Throttle::first()->try_again, 1616007320004);
+        $this->assertEquals(Throttle::first()->try_again, 1616007324000);
 
-        $response = $this->updateTestNow(5, 'milliseconds')->flipSignature()->response();
+        $response = $this->updateTestNow(5000, 'milliseconds')->flipSignature()->response();
         $this->assertForbidden($response);
         $this->assertEquals(Throttle::first()->attempts, 5);
-        $this->assertEquals(Throttle::first()->try_again, 1616007320004);
+        $this->assertEquals(Throttle::first()->try_again, 1616007324000);
         
-        $response = $this->updateTestNow(5, 'milliseconds')->flipSignature()->response();
+        $response = $this->updateTestNow(5000, 'milliseconds')->flipSignature()->response();
         $this->assertForbidden($response);
         $this->assertEquals(Throttle::first()->attempts, 5);
-        $this->assertEquals(Throttle::first()->try_again, 1616007320004);
+        $this->assertEquals(Throttle::first()->try_again, 1616007324000);
     }
 
     public function test_that_requests_from_user_are_throttled_and_eventually_blocked_custom_one_milliseconds()
     {
-        config(['authsodium.throttle.decay' => [1, 2, 3]]);
+        config(['authsodium.throttle.decay' => [1000, 2000, 3000]]);
         
         $userId = 1;
         
@@ -186,27 +184,27 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
         $this->assertUnauthorized($response);
         
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
         
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
         
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320001);
+        $this->assertTooManyRequests($response, 1616007321000);
 
-        $response = $this->updateTestNow(1, 'millisecond')->flipSignature()->response();
+        $response = $this->updateTestNow(1000, 'milliseconds')->flipSignature()->response();
         $this->assertUnauthorized($response);
 
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320003);
+        $this->assertTooManyRequests($response, 1616007323000);
         
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320003);
+        $this->assertTooManyRequests($response, 1616007323000);
         
         $response = $this->response();
-        $this->assertTooManyRequests($response, 1616007320003);
+        $this->assertTooManyRequests($response, 1616007323000);
         
-        $response = $this->updateTestNow(3, 'milliseconds')->response();
+        $response = $this->updateTestNow(3000, 'milliseconds')->response();
         $this->assertSuccessfulRequest($response);
 
         $this->assertNull(Throttle::first());
@@ -229,13 +227,13 @@ class ThrottleMillisecondsTest extends IntegrationTestCase
         $this->assertForbidden($response);
         $this->assertTrue(boolval(Throttle::first()->blocked));
         
-        $response = $this->updateTestNow(5, 'milliseconds')->response();
+        $response = $this->updateTestNow(5000, 'milliseconds')->response();
         $this->assertForbidden($response);
 
-        $response = $this->updateTestNow(5, 'milliseconds')->response();
+        $response = $this->updateTestNow(5000, 'milliseconds')->response();
         $this->assertForbidden($response);
 
-        $response = $this->updateTestNow(5, 'milliseconds')->response();
+        $response = $this->updateTestNow(5000, 'milliseconds')->response();
         $this->assertForbidden($response);
 
         $response = $this->signed()->request()->withUser($userId)->nonce(2)->response();

@@ -63,7 +63,7 @@ class UserRelationsTest extends IntegrationTestCase
             'user_id' => '1',
             'ip_address' => '127.0.0.1',
             'attempts' => 3,
-            'try_again' => 1616007321,
+            'try_again' => 1616007321000,
             'blocked' => '0',
         ], $user->throttle->toArray());
     }

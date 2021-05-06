@@ -14,7 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 use ROTGP\AuthSodium\Models\Nonce;
 use ROTGP\AuthSodium\Models\Throttle;
+
 use ROTGP\AuthSodium\Events\Invalidated;
+use ROTGP\AuthSodium\Events\Throttled;
+use ROTGP\AuthSodium\Events\Blocked;
 
 use Auth;
 use Closure;
@@ -185,6 +188,34 @@ class AuthSodiumDelegate implements Guard
     {
         event(new Failed(
             $this->guardName() ?? Auth::getDefaultDriver(), $user, $credentials
+        ));
+    }
+
+    /**
+     * Fire the Throttled event for the guard/user/throttle.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  \ROTGP\AuthSodium\Models\Throttle  $throttle
+     * @return void
+     */
+    protected function fireThrottledEvent($user, $throttle)
+    {
+        event(new Throttled(
+            $this->guardName() ?? Auth::getDefaultDriver(), $user, $throttle
+        ));
+    }
+
+    /**
+     * Fire the Blocked event for the guard/user/throttle.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  \ROTGP\AuthSodium\Models\Throttle  $throttle
+     * @return void
+     */
+    protected function fireBlockedEvent($user, $throttle)
+    {
+        event(new Blocked(
+            $this->guardName() ?? Auth::getDefaultDriver(), $user, $throttle
         ));
     }
     
@@ -916,7 +947,7 @@ class AuthSodiumDelegate implements Guard
      * message
      *  - If it is, then we return.
      */
-    protected function preThrottle($throttle, $now, $decayValues)
+    protected function preThrottle($user, $throttle, $now, $decayValues)
     {
         /**
          * If no throttle exist then there's no
@@ -934,6 +965,8 @@ class AuthSodiumDelegate implements Guard
         if ($now >= $throttle->try_again) {
             return;
         }
+
+        $this->fireThrottledEvent($user, $throttle);
         
         $this->errorResponse(
             'too_many_requests_please_wait',
@@ -972,7 +1005,7 @@ class AuthSodiumDelegate implements Guard
 
     protected function getThrottleDecay()
     {
-        return config('authsodium.throttle.decay', [0, 0, 0, 1, 3, 10, 60, 300]);
+        return config('authsodium.throttle.decay', [0, 0, 0, 1000, 3000]);
     }
 
     protected function getSecureEnvironments()
@@ -980,7 +1013,7 @@ class AuthSodiumDelegate implements Guard
         return config('authsodium.secure.environments', ['production']);
     }
 
-    protected function postThrottle($throttle, $decayValues)
+    protected function postThrottle($user, $throttle, $decayValues)
     {
         if ($throttle->id) {
             $throttle->attempts++;
@@ -995,6 +1028,7 @@ class AuthSodiumDelegate implements Guard
         $throttle->save();
         
         if ($throttle->blocked) {
+            $this->fireBlockedEvent($user, $throttle);
             $this->throttleExhausted();
         }
     }
@@ -1068,7 +1102,7 @@ class AuthSodiumDelegate implements Guard
             $throttle = Throttle::forUserIdentifier($authUserIdentifier)
                 ->where('ip_address', $ipAddress)
                 ->first();
-            $this->preThrottle($throttle, $now, $decayValues);
+            $this->preThrottle($user, $throttle, $now, $decayValues);
         }
         
         
@@ -1089,7 +1123,7 @@ class AuthSodiumDelegate implements Guard
         if (!$signatureIsValid) {
 
             if ($shouldThrottle) {
-                $this->postThrottle($throttle ?? new Throttle([
+                $this->postThrottle($user, $throttle ?? new Throttle([
                     'user_id' => $authUserIdentifier,
                     'ip_address' => $ipAddress,
                     'attempts' => 0,

@@ -344,7 +344,7 @@ return [
          * Whether to use milliseconds (true) or seconds
          * (false) when dealing with throttles.
          */
-        'milliseconds' => false,
+        'milliseconds' => true,
 
         /**
          * The invervals (in seconds, or milliseconds,
@@ -360,7 +360,7 @@ return [
          * by default) fails, the user is considered to
          * be blocked.
          */
-        'decay' => [0, 0, 0, 1, 3], // [0, 0, 0, 1, 3, 10, 60, 300],
+        'decay' => [0, 0, 0, 1000, 3000],
 
         /**
          * Throttling will not be applied at all for
