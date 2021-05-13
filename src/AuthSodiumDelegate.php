@@ -31,6 +31,8 @@ class AuthSodiumDelegate implements Guard
 {
     protected $user;
     protected $isMiddleware;
+    protected $abortOnInvalidSignature;
+    protected $shouldThrottle;
 
     /**
      * Determine if the current user is authenticated.
@@ -900,6 +902,9 @@ class AuthSodiumDelegate implements Guard
 
     protected function abortOnInvalidSignature()
     {
+        if ($this->abortOnInvalidSignature) {
+            return true;
+        }
         return $this->isMiddleware && config(
             'authsodium.middleware.abort_on_invalid_signature',
             true
@@ -977,6 +982,16 @@ class AuthSodiumDelegate implements Guard
 
     protected function shouldThrottle()
     {
+        $enabled = config('authsodium.throttle.enabled', true);
+        
+        if (!$enabled) {
+            return false;
+        }
+
+        if ($this->shouldThrottle) {
+            return true;
+        }
+
         /**
          * If not middleware and we're only running on
          * middleware, then return false.
@@ -985,14 +1000,12 @@ class AuthSodiumDelegate implements Guard
             return false;
         }
         
-        $enabled = config('authsodium.throttle.enabled', true);
-
         $excluded = in_array(
             app()->environment(), 
             config('authsodium.throttle.exclude_environments', ['local'])
         );
 
-        return $enabled && !$excluded;
+        return !$excluded;
     }
 
     protected function throttleExhausted()
@@ -1063,8 +1076,15 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
-    protected function validateRequest($request, $isMiddleware)
+    protected function validateRequest(
+        $request,
+        $isMiddleware,
+        $abortOnInvalidSignature = null,
+        $shouldThrottle = null
+        )
     {
+        $this->abortOnInvalidSignature = $abortOnInvalidSignature;
+        $this->shouldThrottle = $shouldThrottle;
         $this->checkSecure($request);
         \DB::enableQueryLog();
         $this->isMiddleware = $isMiddleware;

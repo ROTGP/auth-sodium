@@ -10,6 +10,17 @@ return [
      */
     'delegate' => ROTGP\AuthSodium\AuthSodiumDelegate::class,
     
+    'routes' => [
+
+        /**
+         * Provide a route name such as
+         * 'auth/validate' which will point to the
+         * validate method of 
+         * `ROTGP\AuthSodium\Http\Controllers\AuthSodiumController`
+         */
+        'validate' => null
+    ],
+    
     'schema' => [
 
         'nonce' => [
@@ -21,7 +32,7 @@ return [
              */
             'length' => 44,
         ],
-
+        
         /**
          * https://stackoverflow.com/a/6876907/1985175
          * https://crypto.stackexchange.com/a/41173/4557
