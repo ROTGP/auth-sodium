@@ -92,8 +92,6 @@ class ThrottleEventsTest extends IntegrationTestCase
             'Illuminate\Auth\Events\Attempting',
             'ROTGP\AuthSodium\Events\Blocked'
         ], $eventClasses);
-
-
         
         $event = $this->events[8];
         $this->assertTrue(is_a($event, 'ROTGP\AuthSodium\Events\Throttled'));
@@ -124,5 +122,52 @@ class ThrottleEventsTest extends IntegrationTestCase
         $this->assertEquals($event->throttle->user_id, $this->users[0]['model']->id);
         $this->assertEquals($event->throttle->try_again, 1616007324000);
         $this->assertEquals($event->throttle->blocked, 1);
+
+        $this->assertEquals([
+            'eloquent.booting: ROTGP\AuthSodium\Models\Nonce',
+            'eloquent.booted: ROTGP\AuthSodium\Models\Nonce',
+            'eloquent.booting: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.booted: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saving: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.creating: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.created: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saving: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updating: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updated: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saving: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updating: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updated: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saving: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updating: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updated: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saving: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updating: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updated: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saving: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updating: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.updated: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.saved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+            'eloquent.retrieved: ROTGP\AuthSodium\Models\Throttle',
+        ], $this->modelEvents);
     }
 }

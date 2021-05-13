@@ -16,6 +16,7 @@ use Illuminate\Contracts\Http\Kernel;
 use Faker\Factory as Faker;
 use Carbon\Carbon;
 use Event;
+use Closure;
 use Mockery\MockInterface;
 
 abstract class IntegrationTestCase extends TestCase
@@ -37,6 +38,7 @@ abstract class IntegrationTestCase extends TestCase
     private $resource = null;
     private $signed = false;
     protected $events = [];
+    protected $modelEvents = [];
 
     protected $epoch;
 
@@ -59,6 +61,7 @@ abstract class IntegrationTestCase extends TestCase
         $this->buildUsers();
         $this->cleanupRequestData();
         $this->events = [];
+        $this->modelEvents = [];
         Event::listen('Illuminate\Auth\Events\*', function ($value, $event) {
             $this->events[] = $event[0];
         });
@@ -72,6 +75,16 @@ abstract class IntegrationTestCase extends TestCase
         }
         $this->resetMock();
         $this->mockTime();
+
+        Event::listen('eloquent.*', Closure::fromCallable([$this, 'onModelEvent']));
+    }
+
+    protected function onModelEvent($eventName, array $data)
+    {
+        $event = trim(strstr(strstr($eventName, '.'), ':', true), '.:');
+        $model = $data[0];
+        $secondaryModel = $data[1] ?? null;
+        $this->modelEvents[] = $eventName;
     }
 
     protected function resetMock()
