@@ -9,8 +9,6 @@ use Illuminate\Routing\Router;
 use ROTGP\AuthSodium\AuthSodiumDelegate;
 use ROTGP\AuthSodium\Console\PruneNonces;
 
-use ROTGP\AuthSodium\Http\Controllers\AuthSodiumController;
-
 use ROTGP\AuthSodium\Models\Nonce;
 use ROTGP\AuthSodium\Models\Throttle;
 
@@ -174,9 +172,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
             // dd(\DB::getQueryLog());
         });
 
-        $validateRoute = config('authsodium.routes.validate');
-        if ($validateRoute) {
-            Route::get($validateRoute, [AuthSodiumController::class, 'validate']);
+        if (config('authsodium.routes.validate')) {
+            $this->loadRoutesFrom(__DIR__.'/Routes/validateRoute.php');
         }
         
     }

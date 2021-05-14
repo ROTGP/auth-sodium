@@ -234,12 +234,12 @@ class AuthSodiumDelegate implements Guard
         if ($this->getUser()) {
             return true;
         }
-        return $this->validateRequest(request(), false);
+        return $this->validateRequest(false);
     }
 
     public function handle($request, Closure $next)
     {
-        $this->validateRequest($request, true);
+        $this->validateRequest(true);
         
         return $next($request);
     }
@@ -1076,13 +1076,13 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
-    protected function validateRequest(
-        $request,
+    public function validateRequest(
         $isMiddleware,
         $abortOnInvalidSignature = null,
         $shouldThrottle = null
         )
     {
+        $request = request();
         $this->abortOnInvalidSignature = $abortOnInvalidSignature;
         $this->shouldThrottle = $shouldThrottle;
         $this->checkSecure($request);

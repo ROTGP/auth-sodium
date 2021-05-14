@@ -14,7 +14,7 @@ class ValidateRouteNestedTest extends IntegrationTestCase
         ]);
     }
 
-    public function test_that_signed_request_returns_auth_user()
+    public function test_that_signed_request_with_nested_route_returns_auth_user()
     {
         $response = $this->signed()->request('get', 'foo/bar/validate')->response();
         $response->assertStatus(200);

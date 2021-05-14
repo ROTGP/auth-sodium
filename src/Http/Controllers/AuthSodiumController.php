@@ -15,7 +15,7 @@ class AuthSodiumController extends Controller
          * that we explicitly want to fail if something
          * goes wrong, and that we should be throttling
          */
-        authSodium()->validateRequest(request(), false, true, true);
+        authSodium()->validateRequest(false, true, true);
         return response()->json(['auth_user' => authSodium()->user()], 200);
     }
 }
