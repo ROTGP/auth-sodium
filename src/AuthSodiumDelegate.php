@@ -267,7 +267,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function pruneNonces()
     {
-        if (config('authsodium.check_nonces_table_before_pruning', true) && 
+        if (config('authsodium.prune.check_table_exists', true) && 
             !Schema::hasTable('authsodium_nonces')) {
             return;
         }
@@ -359,7 +359,7 @@ class AuthSodiumDelegate implements Guard
 
     protected function getUniquePerTimestamp()
     {
-        return config('authsodium.schema.nonce_unique_per_timestamp', false);
+        return config('authsodium.schema.nonce.unique_per_timestamp', false);
     }
 
     protected function useTimestampMilliseconds()
@@ -388,23 +388,29 @@ class AuthSodiumDelegate implements Guard
      */
     public function validateConfig($throwExceptions = true)
     {
+        $results = [];
         $exceptions = [];
         
         // check OS support for big integers
         $is64Bit = PHP_INT_SIZE === 8;
-        $useMilliseconds = $this->useTimestampMilliseconds();
+        $useTimestampMilliseconds = $this->useTimestampMilliseconds();
+        $useThrottleMilliseconds = $this->useThrottleMilliseconds();
         
-        if (!$is64Bit && $useMilliseconds) {
-            $exceptions[] = 'millisecond timestamps should not be used on 32 bit systems';
+        // $results[''];
+
+        if (!$is64Bit && $useTimestampMilliseconds && $useThrottleMilliseconds) {
+            $exceptions[] = 'Millisecond timestamps should not be used on 32 bit systems';
         }
 
+        
+
         // check that leeway is not too permissive
-        $leeway = config('authsodium.timestamp.leeway');
+        $leeway = $this->getTimestampLeeway();
         if (!$this->isValidInt($leeway)) {
             $exceptions[] = "leeway value of: $leeway is invalid";
         }
         
-        $leewayInSeconds = $useMilliseconds ? ($leeway / 1000) : $leeway;
+        $leewayInSeconds = $useTimestampMilliseconds ? ($leeway / 1000) : $leeway;
 
         if ($leewayInSeconds > 3600) {
             $leewayInHours = number_format($leewayInSeconds / 3600, 5, '.', '');
@@ -1086,8 +1092,8 @@ class AuthSodiumDelegate implements Guard
         $this->abortOnInvalidSignature = $abortOnInvalidSignature;
         $this->shouldThrottle = $shouldThrottle;
         $this->checkSecure($request);
-        \DB::enableQueryLog();
         $this->isMiddleware = $isMiddleware;
+        
         if ($this->getUser()) {
             return true;
         }

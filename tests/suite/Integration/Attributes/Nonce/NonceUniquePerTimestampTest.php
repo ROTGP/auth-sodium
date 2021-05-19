@@ -13,7 +13,7 @@ class NonceUniquePerTimestampTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
 
-        config(['authsodium.schema.nonce_unique_per_timestamp' => true]);
+        config(['authsodium.schema.nonce.unique_per_timestamp' => true]);
     }
 
     public function test_that_signed_request_with_nonces_pertaining_to_different_time_ranges_succeeds()

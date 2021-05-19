@@ -75,7 +75,7 @@ abstract class IntegrationTestCase extends TestCase
         }
         $this->resetMock();
         $this->mockTime();
-
+        
         Event::listen('eloquent.*', Closure::fromCallable([$this, 'onModelEvent']));
     }
 

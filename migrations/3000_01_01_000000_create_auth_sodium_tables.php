@@ -13,7 +13,8 @@ class CreateAuthSodiumTables extends Migration
      */
     public function up()
     {
-        // @TODO why are we doing this? 
+        // @TODO if there any any grave problems, then we
+        // should abort
         authSodium()->validateConfig();
 
         $userModel = authSodium()->authUserModel();
@@ -37,7 +38,7 @@ class CreateAuthSodiumTables extends Migration
                 ->onDelete('cascade');
             
             $uniqueConstraints = ['value', $userForeignKey];
-            if (config('authsodium.schema.nonce_unique_per_timestamp', false)) {
+            if (config('authsodium.schema.nonce.unique_per_timestamp', false)) {
                 $uniqueConstraints[] = 'timestamp';
             }
             $table->unique($uniqueConstraints);

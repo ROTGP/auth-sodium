@@ -8,6 +8,7 @@ use Illuminate\Routing\Router;
 
 use ROTGP\AuthSodium\AuthSodiumDelegate;
 use ROTGP\AuthSodium\Console\PruneNonces;
+use ROTGP\AuthSodium\Console\ValidateConfig;
 
 use ROTGP\AuthSodium\Models\Nonce;
 use ROTGP\AuthSodium\Models\Throttle;
@@ -25,8 +26,6 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
-        \DB::flushQueryLog();
-        
         $delegateNamespace = config('authsodium.delegate', AuthSodiumDelegate::class);
         $delegate = authSodium();
         
@@ -158,24 +157,30 @@ class AuthSodiumServiceProvider extends ServiceProvider
 
             $this->commands([
                 PruneNonces::class,
+                ValidateConfig::class
             ]);
         }
-
-        $this->app->terminating(function () use ($delegate) {
-            if (config('authsodium.log_out_after_request', true)) {
-                authSodium()->invalidate();
-            }
-
-            if (config('authsodium.prune_nonces_on_terminate', true)) {
-                authSodium()->pruneNonces();
-            }
-            // dd(\DB::getQueryLog());
-        });
 
         if (config('authsodium.routes.validate')) {
             $this->loadRoutesFrom(__DIR__.'/Routes/validateRoute.php');
         }
+
+        $logOutAfterRequest = config('authsodium.log_out_after_request', true);
+        $pruneOnTerminate = config('authsodium.prune_nonces_on_terminate', true);
         
+        if (!$logOutAfterRequest && !$pruneOnTerminate) {
+            return;
+        }
+
+        $this->app->terminating(function () use ($logOutAfterRequest, $pruneOnTerminate) {
+            if ($logOutAfterRequest) {
+                authSodium()->invalidate();
+            }
+            
+            if ($pruneOnTerminate) {
+                authSodium()->pruneNonces();
+            }
+        });
     }
 
     public function register()
