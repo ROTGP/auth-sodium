@@ -490,6 +490,11 @@ class AuthSodiumDelegate implements Guard
      */
     protected function validateSignature($value)
     {
+        if ($value === false) {
+            $this->onValidationError('invalid_signature_encoding');
+            return null;
+        }
+
         if (empty($value)) {
             $this->onValidationError('signature_not_found');
             return null;
@@ -734,17 +739,20 @@ class AuthSodiumDelegate implements Guard
         return $this->useBase64() ? base64_encode($value) : bin2hex($value);
     }
 
+    /**
+     * Return false if not properly encoded
+     */
     protected function decode($value)
     {
         if (empty($value)) {
             return $value;
         }
-        return $this->useBase64() ? base64_decode($value) : hex2bin($value);
-    }
+        return $this->useBase64() ? @base64_decode($value, true) : @hex2bin($value);
+    }   
 
     protected function useBase64()
     {
-        return config('authsodium.encoding', 'base64');
+        return strtolower(config('authsodium.encoding', 'base64')) === 'base64';
     }
 
     protected function jsonEncode($value)
@@ -852,12 +860,28 @@ class AuthSodiumDelegate implements Guard
         }
 
         $publicKey = $user[$userPublicKeyIdentifier];
+
         if (empty($publicKey)) {
             $this->onValidationError('user_public_key_not_found');
             return null;
         }
+
+        $publicKey = $this->decode($publicKey);
+
+        if ($publicKey === false) {
+            /**
+             * This is not a validation error because
+             * it's nothing that the client can rectify,
+             * so return a general error response.
+             */
+            $this->errorResponse(
+                'invalid_public_key_encoding',
+                $this->authorizationFailedCode(),
+            );
+            return null;
+        }
         
-        return $this->decode($publicKey);
+        return $publicKey;
     }
 
     protected function retrieveUser($request)

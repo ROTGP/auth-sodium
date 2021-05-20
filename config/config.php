@@ -206,46 +206,6 @@ return [
     ],
 
     /**
-     * How the Auth guard and facade are to be accessed.
-     * The default guard name is null, which is to say
-     * that the Auth facade should be used directly
-     * like: `Auth::user()` instead of with an alias
-     * like `Auth::guard('customName')->user()`
-     */
-    'guard' => [
-
-        /**
-         * Return a string to identify the guard name,
-         * which is essentially an alias. If this is
-         * specified, then the Auth facade itself will
-         * be remain untouched, and instead you can use
-         * Auth::guard('name'). For example, given the
-         * name: 'authsodium', instead of using
-         * Auth::user(), you would use
-         * `Auth::guard('authsodium')->user()`. See more
-         * examples as follows:
-         *
-         * - Auth::guard('authsodium')->check() // bool
-         *
-         * - Auth::guard('authsodium')->user() //
-         *   object|null
-         *
-         * - Auth::guard('authsodium')->id() //
-         *   int|string|null
-         *
-         * - Auth::guard('authsodium')->guest() // bool
-         *
-         * - Auth::guard('authsodium')->authenticateSignature()
-         *   // bool
-         *
-         * - Auth::guard('authsodium')->invalidate()
-         *   // bool
-         *
-         */
-        'name' => null
-    ],
-
-    /**
      * Options for how the auth sodium middleware should
      * be applied to requests in an automated way.
      */
@@ -308,6 +268,46 @@ return [
          * be null.
          */
         'abort_on_invalid_signature' => true
+    ],
+
+    /**
+     * How the Auth guard and facade are to be accessed.
+     * The default guard name is null, which is to say
+     * that the Auth facade should be used directly
+     * like: `Auth::user()` instead of with an alias
+     * like `Auth::guard('customName')->user()`
+     */
+    'guard' => [
+
+        /**
+         * Return a string to identify the guard name,
+         * which is essentially an alias. If this is
+         * specified, then the Auth facade itself will
+         * be remain untouched, and instead you can use
+         * Auth::guard('name'). For example, given the
+         * name: 'authsodium', instead of using
+         * Auth::user(), you would use
+         * `Auth::guard('authsodium')->user()`. See more
+         * examples as follows:
+         *
+         * - Auth::guard('authsodium')->check() // bool
+         *
+         * - Auth::guard('authsodium')->user() //
+         *   object|null
+         *
+         * - Auth::guard('authsodium')->id() //
+         *   int|string|null
+         *
+         * - Auth::guard('authsodium')->guest() // bool
+         *
+         * - Auth::guard('authsodium')->authenticateSignature()
+         *   // bool
+         *
+         * - Auth::guard('authsodium')->invalidate()
+         *   // bool
+         *
+         */
+        'name' => null
     ],
 
     /**
@@ -405,6 +405,8 @@ return [
          * - user_public_key_not_found
          * - onValidationError
          * - unable_to_build_signature_string
+         * - invalid_signature_encoding
+         * - invalid_public_key_encoding
          */
         'validation_error' => 422, // some people prefer 400
         
@@ -597,5 +599,15 @@ return [
          * TLS/SSL secure protocol is not being used 
          */
         'secure_protocol_required' => null,
+
+        /**
+         * The signature encoding is invalid
+         */
+        'invalid_signature_encoding' => null,
+
+        /**
+         * The public key encoding is invalid
+         */
+        'invalid_public_key_encoding' => null,
     ],
 ];
