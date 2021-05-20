@@ -14,7 +14,7 @@ class PrunceNoncesTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
         
-        config(['authsodium.prune_nonces_after_request' => false]);
+        config(['authsodium.prune.after_request' => false]);
     }
 
     /**

@@ -15,8 +15,8 @@ class PruneAfterTerminateTest extends IntegrationTestCase
             ->middleware('authsodium');
 
         config([
-            'authsodium.prune_nonces_after_request' => false,
-            'authsodium.prune_nonces_on_terminate' => true,
+            'authsodium.prune.after_request' => false,
+            'authsodium.prune.on_terminate' => true,
         ]);
     }
 

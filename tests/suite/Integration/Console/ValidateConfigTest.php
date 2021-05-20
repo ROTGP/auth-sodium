@@ -6,7 +6,7 @@ class ValidateConfigTest extends IntegrationTestCase
 {
     protected function customizeSetup()
     {
-        config(['authsodium.prune_nonces_after_request' => false]);
+        config(['authsodium.prune.after_request' => false]);
     }
 
     /**
@@ -17,6 +17,6 @@ class ValidateConfigTest extends IntegrationTestCase
     {
         $result = Artisan::call('authsodium:validate');
         // dd($result);
-        $this->assertTrue(true);
+        $this->assertTrue(true); 
     }
 }

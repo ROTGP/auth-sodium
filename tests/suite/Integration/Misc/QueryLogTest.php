@@ -11,7 +11,7 @@ class QueryLogTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
         
-        config(['authsodium.prune_nonces_after_request' => false]);
+        config(['authsodium.prune.after_request' => false]);
     }
 
     public function test_that_signed_request_to_resource_protected_by_named_middleware_produces_expected_query_log()

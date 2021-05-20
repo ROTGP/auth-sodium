@@ -256,7 +256,7 @@ class AuthSodiumDelegate implements Guard
             $this->invalidate();
         }
 
-        if (config('authsodium.prune_nonces_after_request', true)) {
+        if (config('authsodium.prune.after_request', true)) {
             $this->pruneNonces();
         }
     }

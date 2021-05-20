@@ -342,25 +342,21 @@ return [
          * performance optimization.
          */
         'check_table_exists' => true,
-        
+
         /**
          * Prune nonces on terminating a request (via
          * middleware). As per log_out_after_request, this
          * will only apply if using middleware, and the
          * server supports it.
          */
-        'prune_nonces_after_request' => true,
+        'after_request' => true,
+
+        /**
+         * Prune nonces when the application terminates.
+         * This also includes when run via the cli.
+         */
+        'on_terminate' => false,
     ],
-
-    
-
-    
-
-    /**
-     * Prune nonces when the application terminates.
-     * This also includes when run via the cli.
-     */
-    'prune_nonces_on_terminate' => false,
 
     'encoding' => 'base64', // or 'hex'
 

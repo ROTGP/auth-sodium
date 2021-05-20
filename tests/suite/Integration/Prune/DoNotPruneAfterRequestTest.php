@@ -14,7 +14,7 @@ class DoNotPruneAfterRequestTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
 
-        config(['authsodium.prune_nonces_after_request' => false]);
+        config(['authsodium.prune.after_request' => false]);
     }
 
     public function test_that_a_nonces_are_not_pruned_when_making_multiple_requests_over_time()

@@ -166,7 +166,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
         }
 
         $logOutAfterRequest = config('authsodium.log_out_after_request', true);
-        $pruneOnTerminate = config('authsodium.prune_nonces_on_terminate', true);
+        $pruneOnTerminate = config('authsodium.prune.on_terminate', true);
         
         if (!$logOutAfterRequest && !$pruneOnTerminate) {
             return;
@@ -176,7 +176,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
             if ($logOutAfterRequest) {
                 authSodium()->invalidate();
             }
-            
+
             if ($pruneOnTerminate) {
                 authSodium()->pruneNonces();
             }
