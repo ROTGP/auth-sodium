@@ -4,7 +4,6 @@ namespace ROTGP\AuthSodium\Test;
 
 use ROTGP\AuthSodium\Test\Models\User;
 use ROTGP\AuthSodium\Test\Models\Foo;
-use ROTGP\AuthSodium\Test\Models\Bar;
 use ROTGP\AuthSodium\Models\Nonce;
 
 use Illuminate\Support\Facades\Auth;
@@ -381,9 +380,6 @@ abstract class IntegrationTestCase extends TestCase
 
         for ($i = 0; $i < 10; $i++)
             Foo::create(['name' => self::faker()->name, 'user_id' => 0]);
-
-        for ($i = 0; $i < 10; $i++)
-            Bar::create(['name' => self::faker()->name, 'user_id' => 0]);
     }
 
     public function response()
@@ -590,5 +586,14 @@ abstract class IntegrationTestCase extends TestCase
     {
         $this->signed = false;
         return $this;
+    }
+
+    protected function parseArtisanCommand($command)
+    {
+        $parts = explode(' ', $command);
+        if (count($parts) > 2 && $parts[1] === "'artisan'") {
+            array_shift($parts);
+        }
+        return implode(' ', $parts);
     }
 }

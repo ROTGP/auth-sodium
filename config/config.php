@@ -356,6 +356,27 @@ return [
          * This also includes when run via the cli.
          */
         'on_terminate' => false,
+
+        /**
+         * Specify a time (as a string) to schedule
+         * nonces to be pruned at a daily time. The
+         * format should be in 24-hour time, as hours
+         * and minutes. Examples:
+         *
+         *  - '00.00' // midnight
+         *  - '12.00' // midday
+         *  - '11.30' // 11:30am
+         *  - '23.45' // 11:45pm
+         *
+         * The laravel scheduler must be set up for this
+         * to work, see here for more info
+         * https://laravel.com/docs/8.x/scheduling#running-the-scheduler
+         *
+         * Of course, custom scheduling may be created
+         * by providing the `authsodium:prune` command
+         * as the argument.
+         */
+        'daily_at' => null
     ],
 
     'encoding' => 'base64', // or 'hex'

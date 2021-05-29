@@ -9,6 +9,7 @@ use Illuminate\Routing\Router;
 use ROTGP\AuthSodium\AuthSodiumDelegate;
 use ROTGP\AuthSodium\Console\PruneNonces;
 use ROTGP\AuthSodium\Console\ValidateConfig;
+use Illuminate\Console\Scheduling\Schedule;
 
 use ROTGP\AuthSodium\Models\Nonce;
 use ROTGP\AuthSodium\Models\Throttle;
@@ -16,6 +17,7 @@ use ROTGP\AuthSodium\Models\Throttle;
 use Config;
 use Auth;
 use Route;
+use DateTime;
 
 class AuthSodiumServiceProvider extends ServiceProvider
 {
@@ -27,13 +29,12 @@ class AuthSodiumServiceProvider extends ServiceProvider
     public function boot(Router $router, Kernel $kernel)
     {
         $delegateNamespace = config('authsodium.delegate', AuthSodiumDelegate::class);
-        $delegate = authSodium();
         
-        $this->app->instance($delegateNamespace, $delegate);
-
-        $middlewareName = $delegate->middlewareName();
-        $middlewareGroup = $delegate->middlewareGroup();
-        $useGlobalMiddleware = $delegate->useGlobalMiddleware();
+        $this->app->instance($delegateNamespace, authSodium());
+        
+        $middlewareName = authSodium()->middlewareName();
+        $middlewareGroup = authSodium()->middlewareGroup();
+        $useGlobalMiddleware = authSodium()->useGlobalMiddleware();
         $usingMiddleware = !empty($middlewareName) || 
             !empty($middlewareGroup) ||
             $useGlobalMiddleware === true;
@@ -91,38 +92,21 @@ class AuthSodiumServiceProvider extends ServiceProvider
          * It will NOT get called just because a route
          * is using the authsodium middleware.
          */
-        $guardName = $delegate->guardName();
+        $guardName = authSodium()->guardName();
         if ($guardName) {
             
             config(['auth.guards.' . $guardName => ['driver' => $guardName]]);
             
-            // Return an instance of
-            // Illuminate\Contracts\Auth\Guard
-            // https://laravel.com/api/8.x/Illuminate/Contracts/Auth/Guard.html#method_setUser
-            // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/SessionGuard.php#L725
-            // https://github.com/laravel/framework/blob/7.x/src/Illuminate/Auth/SessionGuard.php#L823
-            // https://github.com/laravel/framework/blob/c62385a23c639742b3b74a4a78640da25e6b782b/src/Illuminate/Auth/GuardHelpers.php#L81
-                
-            Auth::extend($guardName, function ($app, $name) use ($delegate) {
+            /**
+             * See the following source code for references:
+             *  - https://bit.ly/34lvZm3
+             *  - https://bit.ly/34njs1h
+             *  - https://bit.ly/3wBTWBx
+             *  - https://bit.ly/3wCUJ5k
+             */
+            Auth::extend($guardName, function ($app, $name) {
                 return authSodium();
             });
-
-            /**
-             * @TODO not really sure about this - I
-             * don't feel comfortable with events having a
-             * guard name of 'web' when no custom guard
-             * name is set - it seems weird. 
-             *
-             * Auth::setDefaultDriver($guardName);
-             *
-             * `Auth::getDefaultDriver()`
-             *
-             * https://stackoverflow.com/a/51400553/1985175
-             * "The default driver will now be set for
-             * all incoming request from either the api
-             * routes file or from within an api group."
-             * - ok so it's like global?
-             */
         
         /**
          *  For a consistent API, if we're not using a
@@ -131,7 +115,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
          */ 
         } else {
 
-            Auth::macro('authenticateSignature', function () use ($delegate) {
+            Auth::macro('authenticateSignature', function () {
                 return authSodium()->authenticateSignature();
             });
     
@@ -159,6 +143,14 @@ class AuthSodiumServiceProvider extends ServiceProvider
                 PruneNonces::class,
                 ValidateConfig::class
             ]);
+
+            $pruneDailyAt = config('authsodium.prune.daily_at', false);
+        
+            if ($pruneDailyAt && DateTime::createFromFormat('H:i', $pruneDailyAt) !== false) {
+                app()->afterResolving(Schedule::class, function (Schedule $schedule) use ($pruneDailyAt) {
+                    $schedule->command('authsodium:prune')->dailyAt($pruneDailyAt);
+                });
+            }
         }
 
         if (config('authsodium.routes.validate')) {
@@ -167,6 +159,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
 
         $logOutAfterRequest = config('authsodium.log_out_after_request', true);
         $pruneOnTerminate = config('authsodium.prune.on_terminate', true);
+        
         
         if (!$logOutAfterRequest && !$pruneOnTerminate) {
             return;

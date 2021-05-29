@@ -247,8 +247,9 @@ class AuthSodiumDelegate implements Guard
     /**
      * https://laravel.com/docs/8.x/middleware#terminable-middleware
      *
-     * If you define a terminate method on your middleware, it will automatically be
-     * called after the response is sent to the browser.
+     * If you define a terminate method on your
+     * middleware, it will automatically be called after
+     * the response is sent to the browser.
      */
     public function terminate($request, $response)
     {
@@ -369,7 +370,7 @@ class AuthSodiumDelegate implements Guard
 
     protected function useThrottleMilliseconds()
     {
-        return config('authsodium.throttle.milliseconds', false);
+        return config('authsodium.throttle.milliseconds', true);
     }
 
     /**
@@ -378,7 +379,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function getSystemTime($useMilliseconds)
     {
-        return $useMilliseconds ? intval(microtime(true) * 1000) : time();;
+        return $useMilliseconds ? intval(microtime(true) * 1000) : time();
     }
 
     /**
@@ -389,54 +390,76 @@ class AuthSodiumDelegate implements Guard
     public function validateConfig($throwExceptions = true)
     {
         $results = [];
-        $exceptions = [];
         
         // check OS support for big integers
         $is64Bit = PHP_INT_SIZE === 8;
         $useTimestampMilliseconds = $this->useTimestampMilliseconds();
         $useThrottleMilliseconds = $this->useThrottleMilliseconds();
         
-        // $results[''];
-
-        if (!$is64Bit && $useTimestampMilliseconds && $useThrottleMilliseconds) {
-            $exceptions[] = 'Millisecond timestamps should not be used on 32 bit systems';
+        $results['system'] = [];
+        $results['system']['ok'] = true;
+        $bits = $is64Bit ? 64 : 32;
+        $results['system']['msg'] = "System: ${bits}-bit";
+        
+        $results['timestamp_units'] = [];
+        $timestampUnits = $useTimestampMilliseconds ? 'Milliseconds' : 'Seconds';
+        $results['timestamp_units']['msg'] = 'Timestamp units: ' . $timestampUnits;
+        $results['timestamp_units']['ok'] = $is64Bit || (!$is64Bit && !$useTimestampMilliseconds);
+        if (!$results['timestamp_units']['ok']) {
+            $results['timestamp_units']['error'] = 'Millisecond timestamps are not compatible with 32 bit systems. Please change config value `authsodium.timestamp.milliseconds` to false';
         }
 
+        $results['throttle_units'] = [];
+        $throttleUnits = $useThrottleMilliseconds ? 'Milliseconds' : 'Seconds';
+        $results['throttle_units']['msg'] = 'Throttle units: ' . $throttleUnits;
         
+        if (!($is64Bit || (!$is64Bit && !$useThrottleMilliseconds))) {
+            $results['throttle_units']['error'] = 'Using the throttle with milliseconds is not compatible with 32 bit systems. Please change config value `authsodium.throttle.milliseconds` to false';
+        }
 
+        $results['leeway'] = [];
+        
         // check that leeway is not too permissive
         $leeway = $this->getTimestampLeeway();
-        if (!$this->isValidInt($leeway)) {
-            $exceptions[] = "leeway value of: $leeway is invalid";
-        }
-        
         $leewayInSeconds = $useTimestampMilliseconds ? ($leeway / 1000) : $leeway;
-
-        if ($leewayInSeconds > 3600) {
+        
+        $results['leeway']['msg'] = 'Leeway: ' . $leeway . ' ' . $timestampUnits;
+        
+        if (!$this->isValidInt($leeway)) {
+            $results['leeway']['error'] = "leeway value of: $leeway $timestampUnits is invalid";
+        } else if ($leewayInSeconds > 3600) {
             $leewayInHours = number_format($leewayInSeconds / 3600, 5, '.', '');
-            $exceptions[] = "leeway should not exceed one hour (currently $leewayInHours hours)";
+            $results['leeway']['error'] = "leeway should not exceed one hour (currently $leewayInHours hours)";
         }
+
+
+        $results['user_model'] = [];
 
         // check that model is valid
         $model = config('authsodium.user.model');
+
+        $results['user_model']['msg'] = 'User model: ' . ($model ?? 'Not defined');
         
         if (empty($model)) {
-            $exceptions[] = 'auth user model not defined';
+            $results['user_model']['error'] = 'Auth user model is required';
         } else if (!class_exists($model)) {
-            $exceptions[] = 'auth user model class: "' . $model . '" not found';
+            $results['user_model']['error'] = 'Auth user model class: "' . $model . '" not found';
         } else if (!is_a($model, Model::class, true)) {
-            $exceptions[] = 'auth user model class: "' . $model . '" must extend ' . Model::class;
+            $results['user_model']['error'] = 'Auth user model class: "' . $model . '" must extend ' . Model::class;
         } else if (!is_a($model, Authenticatable::class, true)) {
-            $exceptions[] = 'auth user model class: "' . $model . '" must implement ' . Authenticatable::class;
+            $results['user_model']['error'] = 'Auth user model class: "' . $model . '" must implement ' . Authenticatable::class;
         }
+
+        return $results;
 
         // @TODO what other config should be validated?
 
         if ($throwExceptions && count($exceptions)) {
             throw new Exception('Invalid Auth Sodium configuration - ' . $exceptions[0]);
         }
-        
-        return count($exceptions) ? $exceptions : true;
+
+
+        return $results;
     }
 
     public function getNonceMaxLength()
@@ -979,7 +1002,7 @@ class AuthSodiumDelegate implements Guard
      * time is less than or equal to it's try_again
      * value.
      *  - If it's not, then we simply abort with a
-     * message
+     *    message
      *  - If it is, then we return.
      */
     protected function preThrottle($user, $throttle, $now, $decayValues)

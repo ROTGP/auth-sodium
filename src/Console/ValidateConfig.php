@@ -13,13 +13,20 @@ class ValidateConfig extends Command
 
     public function handle()
     {
+        $this->newLine(2);
         $this->info('Validating Auth Sodium configuration...');
+        $this->newLine();
+        
         $results = authSodium()->validateConfig(false);
 
-        // dd($results);
-        
-        // $this->info("$deleteCount nonces were pruned");
-
-        // return $deleteCount;
+        foreach ($results as $key => $value) {
+            $ok = !array_key_exists('error', $value);
+            $icon = $ok ? "\u{2705}" : "\u{274C}";
+            $this->line($icon . ' ' . $value['msg']);
+            if (!$ok) {
+                $this->error($value['error']);
+            }
+            $this->newLine();
+        }
     }
 }

@@ -28,13 +28,6 @@ class CreateInitialTables extends Migration
             $table->integer('user_id');
             $table->timestamps();
         });
-
-        Schema::create('bars', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->integer('user_id');
-            $table->timestamps();
-        });
     }
 
     /**
@@ -44,7 +37,6 @@ class CreateInitialTables extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('bars');
         Schema::dropIfExists('foos');
         Schema::dropIfExists('users');
     }
