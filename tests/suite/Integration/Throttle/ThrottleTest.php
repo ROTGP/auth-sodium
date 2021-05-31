@@ -34,10 +34,10 @@ class ThrottleTest extends IntegrationTestCase
         
         /**
          * Bad signature - no throttle will exist, and
-         * then on failing the request we log the
-         * throttle, which will have zero attempts and
-         * the timestamp of 1616007320, which
-         * corresponds to the current time (our epoch).
+         * then on failing the request the throttle is
+         * logged, which will have zero attempts and the
+         * timestamp of 1616007320, which corresponds to
+         * the current time (our epoch).
          */
         $response = $this->signed()->request()->withUser($userId)->nonce(2)->flipSignature()->response();
         $this->assertUnauthorized($response);
@@ -48,7 +48,7 @@ class ThrottleTest extends IntegrationTestCase
         
         
         /**
-         * We're consuming our first attempt. The value
+         * Consume the first attempt. The value
          * of try_again will remain unchanged because
          * our first decay value is zero.
          */
@@ -58,7 +58,7 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals(Throttle::first()->try_again, 1616007320);
         
         /**
-         * We're consuming our second attempt. The value
+         * Consume the second attempt. The value
          * of try_again will remain unchanged because
          * our second decay value is zero.
          */
@@ -68,7 +68,7 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals(Throttle::first()->try_again, 1616007320);
         
         /**
-         * We're consuming our third attempt. The value
+         * Consume the third attempt. The value
          * of try_again will remain unchanged because
          * our third decay value is zero.
          */
@@ -78,7 +78,7 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals(Throttle::first()->try_again, 1616007321);
         
         /**
-         * We're consuming our fourth attempt. The value
+         * Consume the fourth attempt. The value
          * of try_again will increase by one second, as
          * our fourth decay value is one.
          */
@@ -390,7 +390,7 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals('127.0.0.1', $throttles[1]->ip_address);
         $this->assertFalse(boolval($throttles[1]->blocked));
         
-        $this->assertEquals(1, authsodium()->clearThrottle(1, null));
+        $this->assertEquals(1, authsodium()->deleteThrottle(1, null));
         $throttles = Throttle::all();
 
         $this->assertCount(1, $throttles);
@@ -399,7 +399,7 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals('127.0.0.1', $throttles[0]->ip_address);
         $this->assertFalse(boolval($throttles[0]->blocked));
         
-        $this->assertEquals(1, authsodium()->clearThrottle(2, null));
+        $this->assertEquals(1, authsodium()->deleteThrottle(2, null));
         $this->assertCount(0, Throttle::all()); 
     }
 
@@ -452,7 +452,7 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals(2, $throttles[1]->ip_address);
         $this->assertFalse(boolval($throttles[1]->blocked));
         
-        $this->assertEquals(1, authsodium()->clearThrottle(null, 1));
+        $this->assertEquals(1, authsodium()->deleteThrottle(null, 1));
         $throttles = Throttle::all();
 
         $this->assertCount(1, $throttles);
@@ -461,7 +461,7 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals(2, $throttles[0]->ip_address);
         $this->assertFalse(boolval($throttles[0]->blocked));
         
-        $this->assertEquals(1, authsodium()->clearThrottle(null, 2));
+        $this->assertEquals(1, authsodium()->deleteThrottle(null, 2));
         $this->assertCount(0, Throttle::all()); 
     }
 
@@ -501,16 +501,16 @@ class ThrottleTest extends IntegrationTestCase
 
         $this->assertCount(4, Throttle::all());
 
-        $this->assertEquals(2, authsodium()->clearThrottle(null, 1));
+        $this->assertEquals(2, authsodium()->deleteThrottle(null, 1));
         $this->assertCount(2, Throttle::all());
 
-        $this->assertEquals(0, authsodium()->clearThrottle(1, 1));
+        $this->assertEquals(0, authsodium()->deleteThrottle(1, 1));
         $this->assertCount(2, Throttle::all());
 
-        $this->assertEquals(1, authsodium()->clearThrottle(1, null));
+        $this->assertEquals(1, authsodium()->deleteThrottle(1, null));
         $this->assertCount(1, Throttle::all());
 
-        $this->assertEquals(1, authsodium()->clearThrottle(2, null));
+        $this->assertEquals(1, authsodium()->deleteThrottle(2, null));
         $this->assertCount(0, Throttle::all());
     }
 }

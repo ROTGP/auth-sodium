@@ -41,8 +41,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
 
         /**
          * https://yish.dev/ordering-laravel-middleware-priority
-         * We want this to run early, so we prepend it
-         * to the beginning of the array.
+         * This should run early, so it is prepended to
+         * the beginning of the array.
          */
         if ($usingMiddleware)
             $kernel->prependToMiddlewarePriority($delegateNamespace);
@@ -109,8 +109,8 @@ class AuthSodiumServiceProvider extends ServiceProvider
             });
         
         /**
-         *  For a consistent API, if we're not using a
-         *  custom guard name, then add the following
+         *  For a consistent API, if custom guard name
+         *  is not being used, then add the following
          *  methods to the Auth facade.
          */ 
         } else {

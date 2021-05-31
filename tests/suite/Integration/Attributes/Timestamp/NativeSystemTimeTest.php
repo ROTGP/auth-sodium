@@ -6,7 +6,7 @@ use ROTGP\AuthSodium\Test\Controllers\FooController;
 use Carbon\Carbon;
 
 /**
- * For the majority of tests, we mock the getSystemTime
+ * For the majority of tests, mock the getSystemTime
  * method so that it returns `Carbon::now()` - which in
  * turn returns the result of `Carbon::setTestNow`
  *

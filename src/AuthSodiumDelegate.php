@@ -29,9 +29,36 @@ use DateTimeZone;
 
 class AuthSodiumDelegate implements Guard
 {
+    /**
+     * The authenticated user (in the case of using a
+     * custom guard).
+     *
+     * @var \Illuminate\Contracts\Auth\Authenticatable
+     */
     protected $user;
+    
+    /**
+     * Whether or not middleware is being used.
+     *
+     * @var bool
+     */
     protected $isMiddleware;
+
+    
+    /**
+     * Whether or not the request should be aborted when
+     * a signature is found to be invalid.
+     *
+     * @var bool
+     */
     protected $abortOnInvalidSignature;
+    
+
+    /**
+     * Whether or not throttling should be performed.
+     *
+     * @var bool
+     */
     protected $shouldThrottle;
 
     /**
@@ -57,7 +84,8 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * Get the currently authenticated user.
+     * Attempt to authenticate and then get the
+     * currently authenticated user.
      *
      * @return \Illuminate\Contracts\Auth\Authenticatable|null
      */
@@ -78,7 +106,7 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * Get the ID for the currently authenticated user.
+     * Get the id for the currently authenticated user.
      *
      * @return int|null
      */
@@ -224,8 +252,8 @@ class AuthSodiumDelegate implements Guard
     /**
      * If there is no user currently authenticated, then
      * try to authenticate one, based on the current
-     * request. Return whether or not we were able to
-     * authenticate a user.
+     * request. Return whether or not it was possible to
+     * authenticate the user.
      *
      * @return bool
      */
@@ -237,6 +265,13 @@ class AuthSodiumDelegate implements Guard
         return $this->validateRequest(false);
     }
 
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return mixed
+     */
     public function handle($request, Closure $next)
     {
         $this->validateRequest(true);
@@ -245,11 +280,11 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * https://laravel.com/docs/8.x/middleware#terminable-middleware
+     * Handle tasks after the response has been sent to the browser.
      *
-     * If you define a terminate method on your
-     * middleware, it will automatically be called after
-     * the response is sent to the browser.
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Http\Response  $response
+     * @return void
      */
     public function terminate($request, $response)
     {
@@ -265,6 +300,7 @@ class AuthSodiumDelegate implements Guard
     /**
      * Delete nonces that are older than the leeway
      * period, and return the number deleted.
+     * @return int
      */
     public function pruneNonces()
     {
@@ -278,9 +314,13 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * @TODO
+     * Delete a user's throttle.
+     * 
+     * @param  mixed  $authUserIdentifier
+     * @param  string  $ipAddress
+     * @return bool
      */
-    public function clearThrottle($authUserIdentifier, $ipAddress)
+    public function deleteThrottle($authUserIdentifier, $ipAddress)
     {
         if (!Schema::hasTable('authsodium_throttles') || 
             ($authUserIdentifier === null && $ipAddress === null)
@@ -303,9 +343,10 @@ class AuthSodiumDelegate implements Guard
     
     /**
      * Return the method of the incoming request. Ie,
-     * get, put, post or delete. We use lowercase as
+     * get, put, post or delete. Lowercase is used as
      * standard.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @return string
      */
     protected function getSignatureMethod($request)
@@ -317,7 +358,8 @@ class AuthSodiumDelegate implements Guard
      * Return the full url of the incoming request,
      * including the http protocol, but WITHOUT the
      * query string.
-     *
+     * 
+     * @param  \Illuminate\Http\Request  $request
      * @return string
      */
     protected function getSignatureUrl($request)
@@ -326,15 +368,12 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * Return a nonce for the request. It can be
-     * anything, (string, int), a counter, whatever, as
-     * long as the user making the request hasn't used
-     * it within the current timestamp window. Given
-     * that it must only be unique to the user, and that
-     * nonces older than the current timestamp window
-     * are deleted, a 32 byte CSPRNG-generated
-     * base64-encoded string would work well.
-     *
+     * Return a nonce for the request.
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  bool  $validate
+     * @param  int  $timestamp
      * @return string|int
      */
     protected function getSignatureNonce($request, $user, $validate = true, $timestamp = null)
@@ -353,29 +392,84 @@ class AuthSodiumDelegate implements Guard
         return $nonce;
     }
 
+    /**
+     * Get the leeway for the timestamp.
+     * 
+     * @return int
+     */
     protected function getTimestampLeeway()
     {
         return config('authsodium.timestamp.leeway', 300000);
     }
 
+    /**
+     * Get whether nonces are unique per timestamp.
+     * 
+     * @return bool
+     */
     protected function getUniquePerTimestamp()
     {
         return config('authsodium.schema.nonce.unique_per_timestamp', false);
     }
 
+    /**
+     * Get whether to use milliseconds for timestamps. 
+     * 
+     * @return bool
+     */
     protected function useTimestampMilliseconds()
     {
         return config('authsodium.timestamp.milliseconds', true);
     }
 
+    /**
+     * Get whether to use milliseconds for throttles. 
+     * 
+     * @return bool
+     */
     protected function useThrottleMilliseconds()
     {
         return config('authsodium.throttle.milliseconds', true);
     }
 
     /**
-     * Returns milliseconds (or seconds, depending on
-     * config) since midnight January 1st 1970 (UTC)
+     * Get the max length for a nonce.
+     *
+     * @return int
+     */
+    public function getNonceMaxLength()
+    {
+        return config('authsodium.schema.nonce.length', 44);
+    }
+
+    
+    /**
+     * Get throttle decay values.
+     *
+     * @return array
+     */
+    protected function getThrottleDecay()
+    {
+        return config('authsodium.throttle.decay', [0, 0, 0, 1000, 3000]);
+    }
+
+        
+    /**
+     * Get secure TLS environments.
+     *
+     * @return array
+     */
+    protected function getSecureEnvironments()
+    {
+        return config('authsodium.secure.environments', ['production']);
+    }
+
+    /**
+     * Get milliseconds (or seconds, depending on
+     * config) since midnight January 1st 1970 (UTC).
+     * 
+     * @param  bool  $useMilliseconds
+     * @return int
      */
     public function getSystemTime($useMilliseconds)
     {
@@ -386,6 +480,10 @@ class AuthSodiumDelegate implements Guard
      * Validate the package's user-defined config, handy
      * for running prior to migrations, prior to
      * code-execution, or from the artisan CLI. 
+     * 
+     * @param  bool  $throwExceptions
+     * 
+     * @return array
      */
     public function validateConfig($throwExceptions = true)
     {
@@ -462,14 +560,13 @@ class AuthSodiumDelegate implements Guard
         return $results;
     }
 
-    public function getNonceMaxLength()
-    {
-        return config('authsodium.schema.nonce.length', 44);
-    }
-
     /**
-     * Validate the existence, length etc of signature,
-     * not whether it's value is valid;
+     * Validate the nonce and return it.
+     *
+     * @param  string $value
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  int  $timestamp
+     * @return string|null
      */
     protected function validateNonce($value, $user, $timestamp)
     {
@@ -509,7 +606,11 @@ class AuthSodiumDelegate implements Guard
 
     /**
      * Validate the existence, length etc of signature,
-     * not whether it's value is valid;
+     * not whether it's value is valid, and then return
+     * it. 
+     *
+     * @param  string $value
+     * @return string|null
      */
     protected function validateSignature($value)
     {
@@ -531,10 +632,14 @@ class AuthSodiumDelegate implements Guard
         return $value;
     }
 
+        
     /**
      * Validate that a value is a valid int, whether it
      * be an int, a float, a string (empty or
      * otherwise), or null.
+     *
+     * @param  mixed $value
+     * @return bool
      */
     protected function isValidInt($value)
     {
@@ -543,7 +648,13 @@ class AuthSodiumDelegate implements Guard
             $value >= 0 &&
             $value <= PHP_INT_MAX;
     }
-
+    
+    /**
+     * Validate and return the request timestamp.
+     *
+     * @param  mixed $value
+     * @return int|null
+     */
     protected function validateTimestamp($value)
     {
         if (empty($value)) {
@@ -570,9 +681,11 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * Return a unix timestamp of when the request was
-     * made.
+     * Return a timestamp of when the request was made
+     * (according to the client).
      *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  bool $validate
      * @return int
      */
     protected function getSignatureTimestamp($request, $validate = true)
@@ -597,7 +710,8 @@ class AuthSodiumDelegate implements Guard
      * anything really. However, the user/client should
      * know this prior to sending the request, so an
      * email address or username works well.
-     *
+     * 
+     * @param  \Illuminate\Http\Request  $request
      * @return string|int
      */
     protected function getUserIdentifier($request)
@@ -623,7 +737,7 @@ class AuthSodiumDelegate implements Guard
      *
      * @param array $array
      * @param boolean $sort
-     * @return void
+     * @return string
      */
     protected function stringify($array, $sort = true)
     {
@@ -650,9 +764,10 @@ class AuthSodiumDelegate implements Guard
      * sending '?b=banana&a=apple' may arrive to our
      * application sorted, ie:?a=apple&b=banana. Other
      * examples includes empty values, utf encoding,
-     * etc. So we attempt to standardize the query data
-     * as much as possible.
+     * etc. An attempt is made to standardize the query
+     * data as much as possible.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @return string
      */
     protected function getSignatureQuery($request)
@@ -661,8 +776,10 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * Return a the put/post data as a string.
+     * Return the put/post data as a string.
      *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $method
      * @return string
      */
     protected function getSignaturePostdata($request, $method)
@@ -689,7 +806,7 @@ class AuthSodiumDelegate implements Guard
      * Return a string to identify the AuthSodium guard
      * name.
      *
-     * @return string
+     * @return string|null
      */
     public function guardName()
     {
@@ -697,7 +814,7 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * Return whether or not we're using a guard.
+     * Return whether or not a guard is being used.
      *
      * @return bool
      */
@@ -707,7 +824,7 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * Return whether or not we're using a guard.
+     * Return whether or not middleware is being used.
      *
      * @return bool
      */
@@ -723,8 +840,8 @@ class AuthSodiumDelegate implements Guard
      * guards, or appending the middleware to another
      * group).
      *
-     * Assuming we return a string, (such as
-     * 'authsodium'), then we can apply the middleware
+     * Assuming a string is returned, (such as
+     * 'authsodium'), then the middleware can be applied
      * in several different ways.
      *
      * @return string
@@ -756,14 +873,23 @@ class AuthSodiumDelegate implements Guard
     {
         return config('authsodium.middleware.use_global', false);
     }
-
+    
+    /**
+     * Encode a string to base64 or hex.
+     *
+     * @param  string $value
+     * @return string
+     */
     protected function encode($value)
     {
         return $this->useBase64() ? base64_encode($value) : bin2hex($value);
     }
-
+    
     /**
-     * Return false if not properly encoded
+     * Decode a base64 or hex-encoded string.
+     *
+     * @param  mixed $value
+     * @return string|bool
      */
     protected function decode($value)
     {
@@ -772,18 +898,33 @@ class AuthSodiumDelegate implements Guard
         }
         return $this->useBase64() ? @base64_decode($value, true) : @hex2bin($value);
     }   
-
+    
+    /**
+     * Return whether to use base64 encoding.
+     *
+     * @return bool
+     */
     protected function useBase64()
     {
         return strtolower(config('authsodium.encoding', 'base64')) === 'base64';
     }
-
+    
+    /**
+     * JSON-encode an array.
+     *
+     * @param  array $value
+     * @return string
+     */
     protected function jsonEncode($value)
     {
         return json_encode($value, JSON_UNESCAPED_UNICODE);
     }
 
-    // the field used to uniquely identify the user
+    /**
+     * Get the user's unique identifier (name). 
+     *
+     * @return string
+     */
     protected function userUniqueIdentifier()
     {
         return config(
@@ -791,8 +932,12 @@ class AuthSodiumDelegate implements Guard
             'email'
         );
     }
-
-    // the field used to uniquely identify the user
+    
+    /**
+     * Get the user's public key identifier (name). 
+     *
+     * @return string
+     */
     protected function userPublicKeyIdentifier()
     {
         return config(
@@ -801,6 +946,11 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
+    /**
+     * Return the validation error http code.
+     *
+     * @return int
+     */
     protected function validationErrorCode()
     {
         return config(
@@ -809,6 +959,11 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
+    /**
+     * Return the secure-protocol-required http code.
+     *
+     * @return int
+     */
     protected function secureProtocolRequiredCode()
     {
         return config(
@@ -816,12 +971,11 @@ class AuthSodiumDelegate implements Guard
             426
         );
     }
-
-    
-
+        
     /**
-     * All the required information was provided, but
-     * the signature verification failed.
+     * Return the unauthorized http code.
+     *
+     * @return int
      */
     protected function authorizationFailedCode()
     {
@@ -831,9 +985,11 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
+    
     /**
-     * All the required information was provided, but
-     * the signature verification failed.
+     * Return the too-many-requests http code.
+     *
+     * @return int
      */
     protected function tooManyRequestsCode()
     {
@@ -842,10 +998,11 @@ class AuthSodiumDelegate implements Guard
             429
         );
     }
-
+    
     /**
-     * All the required information was provided, but
-     * the signature verification failed.
+     * Return the forbidden http code.
+     *
+     * @return int
      */
     protected function forbiddenCode()
     {
@@ -854,7 +1011,13 @@ class AuthSodiumDelegate implements Guard
             403
         );
     }
-
+    
+    /**
+     * Retrieve the signature that was sent with the request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return string
+     */
     protected function retrieveSignature($request)
     {
         $signature = $this->decode(
@@ -873,7 +1036,13 @@ class AuthSodiumDelegate implements Guard
 
         return $signature;
     }
-
+    
+    /**
+     * Retrieve the user's public key.
+     *
+     * @param \Illuminate\Contracts\Auth\Authenticatable $user
+     * @return string
+     */
     protected function retrievePublicKey($user)
     {
         $userPublicKeyIdentifier = $this->userPublicKeyIdentifier();
@@ -906,7 +1075,13 @@ class AuthSodiumDelegate implements Guard
         
         return $publicKey;
     }
-
+    
+    /**
+     * Retrieve the user for the request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return  \Illuminate\Contracts\Auth\Authenticatable|null
+     */
     protected function retrieveUser($request)
     {
         $model = $this->authUserModel();
@@ -935,6 +1110,14 @@ class AuthSodiumDelegate implements Guard
         return $user;
     }
 
+    /**
+     * Build the signature string to be verified with
+     * the user's signature and public key.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @return string
+     */
     protected function buildSignatureString($request, $user)
     {
         $toSign = [];
@@ -952,7 +1135,13 @@ class AuthSodiumDelegate implements Guard
         }
         return implode($this->glue(), array_values($toSign));
     }
-
+    
+    /**
+     * Return whether or not the abort the request if
+     * the signature is found to be invalid.
+     *
+     * @return bool
+     */
     protected function abortOnInvalidSignature()
     {
         if ($this->abortOnInvalidSignature) {
@@ -964,7 +1153,14 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
-    // https://stackoverflow.com/a/41769505/1985175
+    /**
+     * Get the real ip address of the client, despite
+     * load balancers.
+     * https://stackoverflow.com/a/41769505/1985175
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     */
     protected function getIpAddress($request){
         foreach ([
             'HTTP_CLIENT_IP',
@@ -998,12 +1194,18 @@ class AuthSodiumDelegate implements Guard
      *
      * If none exists then returns immediately.
      *
-     * If one exists, then we check that the current
-     * time is less than or equal to it's try_again
-     * value.
-     *  - If it's not, then we simply abort with a
-     *    message
-     *  - If it is, then we return.
+     * If one exists, then check that the current time
+     * is less than or equal to it's try_again value.
+     *  - If it's not, then simply abort with a message
+     *  - If it is, then return.
+     *
+     * @param
+     * \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  \ROTGP\AuthSodium\Models\Throttle
+     * $throttle
+     * @param  int $now
+     * @param  array $decayValues
+     * @return void
      */
     protected function preThrottle($user, $throttle, $now, $decayValues)
     {
@@ -1032,7 +1234,12 @@ class AuthSodiumDelegate implements Guard
             ['try_again' => $throttle->try_again]
         );
     }
-
+    
+    /**
+     * Return whether or not to perform throttling.
+     *
+     * @return bool
+     */
     protected function shouldThrottle()
     {
         $enabled = config('authsodium.throttle.enabled', true);
@@ -1046,8 +1253,8 @@ class AuthSodiumDelegate implements Guard
         }
 
         /**
-         * If not middleware and we're only running on
-         * middleware, then return false.
+         * If not middleware and the throttle is middleware-only
+         * then return false.
          */
         if (!$this->isMiddleware && config('authsodium.throttle.middleware_only', true)) {
             return false;
@@ -1060,7 +1267,13 @@ class AuthSodiumDelegate implements Guard
 
         return !$excluded;
     }
-
+    
+    /**
+     * Return an error response that the user's throttle
+     * has been exhausted.
+     *
+     * @return void
+     */
     protected function throttleExhausted()
     {
         $this->errorResponse(
@@ -1069,16 +1282,15 @@ class AuthSodiumDelegate implements Guard
         );
     }
 
-    protected function getThrottleDecay()
-    {
-        return config('authsodium.throttle.decay', [0, 0, 0, 1000, 3000]);
-    }
-
-    protected function getSecureEnvironments()
-    {
-        return config('authsodium.secure.environments', ['production']);
-    }
-
+        
+    /**
+     * Update throttle and potentially block user.
+     *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
+     * @param  \ROTGP\AuthSodium\Models\Throttle $throttle
+     * @param  array $decayValues
+     * @return void
+     */
     protected function postThrottle($user, $throttle, $decayValues)
     {
         if ($throttle->id) {
@@ -1098,12 +1310,24 @@ class AuthSodiumDelegate implements Guard
             $this->throttleExhausted();
         }
     }
-
+    
+    /**
+     * Get the the http scheme ('http' or 'https').
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return string
+     */
     protected function getScheme($request)
     {
         return $request->getScheme();
     }
-
+    
+    /**
+     * Check that a request uses a secure protocol.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     */
     protected function checkSecure($request)
     {
         if (!in_array(
@@ -1120,20 +1344,22 @@ class AuthSodiumDelegate implements Guard
             ) {
             return;
         }
-
-        // https://stackoverflow.com/questions/2554778/what-is-the-proper-http-response-to-send-for-requests-that-require-ssl-tls
         
         $this->errorResponse(
             'secure_protocol_required',
             $this->secureProtocolRequiredCode()
         );
     }
-
-    public function validateRequest(
-        $isMiddleware,
-        $abortOnInvalidSignature = null,
-        $shouldThrottle = null
-        )
+    
+    /**
+     * Validate that a request has a valid signature.
+     *
+     * @param  bool $isMiddleware
+     * @param  bool $abortOnInvalidSignature
+     * @param  bool $shouldThrottle
+     * @return void
+     */
+    public function validateRequest($isMiddleware, $abortOnInvalidSignature = null, $shouldThrottle = null)
     {
         $request = request();
         $this->abortOnInvalidSignature = $abortOnInvalidSignature;
@@ -1243,6 +1469,7 @@ class AuthSodiumDelegate implements Guard
     /**
      * Return an instance of the user-defined User model.
      *
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
      */
     public function authUserModel()
     {
@@ -1268,19 +1495,38 @@ class AuthSodiumDelegate implements Guard
         
         return $model;
     }
-
+    
+    /**
+     * Translate the error message.
+     *
+     * @param  string $value
+     * @return string
+     */
     protected function translateErrorMessage($value)
     {
         return ucfirst(strtolower(str_replace('_', ' ', $value)));
     }
-
+    
+    /**
+     * Append error data to the error payload.
+     *
+     * @param  array $payload
+     * @param  string $error
+     * @return void
+     */
     protected function appendErrorData(&$payload, $error)
     {
         $payload['error_key'] = $error;
         $payload['error_code'] = config('authsodium.error_codes.' . $error, null);
         $payload['error_message'] = $this->translateErrorMessage($error);
     }
-
+    
+    /**
+     * Abort the request with a validation error.
+     *
+     * @param  string $errorKey
+     * @return void
+     */
     protected function onValidationError($errorKey)
     {
         if ($this->abortOnInvalidSignature()) {
@@ -1288,8 +1534,16 @@ class AuthSodiumDelegate implements Guard
             $this->errorResponse($errorKey, $httpStatusCode);
         }
     }
-
-    protected function errorResponse($errorKey, $httpStatusCode, $extras = []) : void
+    
+    /**
+     * Abort the request with an error.
+     *
+     * @param  string $errorKey
+     * @param  int $httpStatusCode
+     * @param  array $extras
+     * @return void
+     */
+    protected function errorResponse($errorKey, $httpStatusCode, $extras = [])
     {
         if (!is_int($httpStatusCode)) {
             throw new Exception('HTTP status code is required');

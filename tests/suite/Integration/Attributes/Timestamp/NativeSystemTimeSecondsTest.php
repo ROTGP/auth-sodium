@@ -6,9 +6,9 @@ use ROTGP\AuthSodium\Test\Controllers\FooController;
 use Carbon\Carbon;
 
 /**
- * For the majority of tests, we mock the getSystemTime
- * method so that it returns `Carbon::now()` - which in
- * turn returns the result of `Carbon::setTestNow`
+ * For the majority of tests, getSystemTime is mocked so
+ * that it returns `Carbon::now()` - which in turn
+ * returns the result of `Carbon::setTestNow`
  *
  * In this test - $shouldMock is false, so the real
  * getSystemTime method will be called and will return

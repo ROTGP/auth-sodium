@@ -4,8 +4,8 @@ return [
 
     /**
      * The class containing the core logic. It must be
-     * either the delegate itself, or if custom
-     * functionality is desired, a class which extends
+     * either the delegate itself, or for custom
+     * functionality – a class which extends
      * ROTGP\AuthSodium\AuthSodiumDelegate.
      */
     'delegate' => ROTGP\AuthSodium\AuthSodiumDelegate::class,
@@ -15,38 +15,42 @@ return [
      * to running migrations.
      */
     'schema' => [
-
+        
         /**
          * The nonce (number used once) which must be
          * provided for each authenticated request.
          */
         'nonce' => [
-
+            
             /**
              * The length of the nonce for the database
              * column. By default it's 44, which is 32
              * base64 encoded bytes. For hex encoding,
-             * the length should be 64.
+             * the length should be 64. Not that this is
+             * just a plain string (or int). It is
+             * convenient to generate random bytes with
+             * a CSPRNG and encode them as hex or
+             * base64, but in the end it's just a
+             * string.
              */
             'length' => 44,
-
+            
             /**
              * Whether or not the nonce should be unique
              * per user/timestamp.
              *
              * If true, then a unique constraint for
              * user/nonce/timestamp will be created at
-             * the database level, meaning that a nonce
-             * can be reused if it has a different
+             * database level, meaning that a nonce can
+             * be reused if it has a different
              * timestamp. A request with a repeating
              * user/nonce/timestamp will still be
              * rejected if the timestamp does not fall
-             * within `timestamp.leeway` seconds of the
-             * system time. This allows for more margin
-             * or error (random nonces being repeated),
-             * as the nonces must only be unique within
-             * `timestamp.leeway` seconds of the system
-             * time.
+             * within `timestamp.leeway` of the system
+             * time. This allows for more margin or
+             * error (random nonces being repeated), as
+             * the nonces must only be unique within
+             * `timestamp.leeway` of the system time.
              *
              * If false (the default), then the unique
              * constraint will be for the user/nonce,
@@ -73,21 +77,22 @@ return [
      * attributes.
      */
     'user' => [
-
+        
         /**
          * The model class to be used for all auth
          * operations. The only requirements are that
          * the model should extend
-         * Illuminate\Database\Eloquent\Model, and
+         * `Illuminate\Database\Eloquent\Model`, and
          * should implement
-         * Illuminate\Contracts\Auth\Authenticatable.
-         * For convenience's sake, the model may extend
-         * ROTGP\AuthSodium\Models\AuthSodiumUser. This
-         * configuration is required, and may NOT be
+         * `Illuminate\Contracts\Auth\Authenticatable`.
+         * For convenience, the model may simply extend
+         * `ROTGP\AuthSodium\Models\AuthSodiumUser`
+         * which already meets these requirements. This
+         * configuration is REQUIRED, and may NOT be
          * null.
          */
         'model' => null,
-
+        
         /**
          * The name of the model field/column used to
          * uniquely identify the user. This is to be
@@ -100,7 +105,7 @@ return [
          * email address, or anything else.
          */
         'unique_identifier' => 'email',
-
+        
         /**
          * The name of the model field/column used for
          * storing the user's public key. The public key
@@ -110,11 +115,11 @@ return [
          */
         'public_key_identifier' => 'public_key',
     ],
-
+    
     /**
-     * Return a string to 'glue' together the pieces of
-     * the signature array together. The default is an
-     * empty string.
+     * A string to 'glue' together the pieces of the
+     * signature array together. The default is an empty
+     * string.
      */
     'glue' => '',
     
@@ -123,13 +128,13 @@ return [
      * with every authenticated request.
      */
     'header_keys' => [
-
+        
         /**
          * The nonce, a random number or counter to be
          * sent with each request,
          */
         'nonce' => 'Auth-Nonce',
-
+        
         /**
          * The timestamp of when the request is being
          * made. Either in seconds or milliseconds,
@@ -146,7 +151,7 @@ return [
          * email address, or their username.
          */
         'user_identifier' => 'Auth-User',
-
+        
         /**
          * The signature of the following array,
          * imploded using the config value of `glue`,
@@ -162,62 +167,20 @@ return [
          */
         'signature' => 'Auth-Signature'
     ],
-
-    /**
-     * Options for convenience routes. By default, none
-     * are provided.
-     */
-    'routes' => [
-
-        /**
-         * Provide a route name such as 'auth/validate'
-         * which will point to the `validate` method of
-         * `ROTGP\AuthSodium\Http\Controllers\AuthSodiumController`.
-         * The request should be a simple GET request to
-         * the route name provided, with no query or
-         * post data. The user is then authenticated and
-         * returned. If the authentication should fail,
-         * then the appropriate codes will be returned. 
-         */
-        'validate' => null
-    ],
-
-    /**
-     * Options for enforcing secure HTTPS/TLS
-     * connections.
-     */
-    'secure' => [
-
-        /**
-         * The environments in which HTTPS/TLS
-         * connections are to be enforced. Requests made
-         * with insecure schemes in these environments
-         * will fail.
-         */
-        'environments' => ['production'],
-        
-        /**
-         * The schemes which are acceptable in secure
-         * environments. This should only ever really be
-         * https, however, other schemes do exist, such
-         * as 'wss' (secure web sockets).
-         */
-        'schemes' => ['https']
-    ],
-
+    
     /**
      * Options for how the auth sodium middleware should
      * be applied to requests in an automated way.
      */
     'middleware' => [
-
+        
         /**
          * Return a string to add AuthSodium middleware
          * to a middleware group automatically. For
          * example, 'web' or 'api'.
          */
         'group' => null,
-
+        
         /**
          * Return a string to identify the AuthSodium
          * middleware. Return null if you don't wish to
@@ -225,38 +188,40 @@ return [
          * guards, or appending the middleware to
          * another group).
          *
-         * Assuming we return a string, (such as
-         * 'authsodium'), then we can apply the
-         * middleware in several different ways.
+         * Assuming a string is returned, (such as
+         * 'authsodium'), then the middleware can be
+         * applied in several different ways.
          *
          * Per route:
          *
-         * `Route::resource('foos', FooController::class)->middleware('authsodium');`
+         * `Route::resource('foos',
+         * FooController::class)->middleware('authsodium');`
          *
          * Per controller (in the contoller's
          * constructor):
          *
          * public function __construct()
          * {
-         *    $this->middleware('authsodium');
-         *    // $this->middleware('authsodium')->only('index');
-         *    // $this->middleware('authsodium')->except('index');
+         *    $this->middleware('authsodium'); //
+         *    $this->middleware('authsodium')->only('index');
+         *    //
+         *    $this->middleware('authsodium')->except('index');
          * }
-         * 
+         *
          * etc
          *
          * See more here:
          * https://laravel.com/docs/8.x/middleware
          */
         'name' => 'authsodium',
-
+        
         /**
          * Return true to run AuthSodium middleware
          * implicitly on all requests. False by default
          * as it's not very flexible.
          */
         'use_global' => false,
-
+        
         /**
          * If true, requests will be aborted
          * automatically when the middleware is run and
@@ -269,7 +234,7 @@ return [
          */
         'abort_on_invalid_signature' => true
     ],
-
+    
     /**
      * How the Auth guard and facade are to be accessed.
      * The default guard name is null, which is to say
@@ -292,24 +257,20 @@ return [
          *
          * - Auth::guard('authsodium')->check() // bool
          *
-         * - Auth::guard('authsodium')->user() //
-         *   object|null
+         * - Auth::guard('authsodium')->user() // object|null
          *
-         * - Auth::guard('authsodium')->id() //
-         *   int|string|null
+         * - Auth::guard('authsodium')->id() // int|string|null
          *
          * - Auth::guard('authsodium')->guest() // bool
          *
          * - Auth::guard('authsodium')->authenticateSignature()
          *   // bool
          *
-         * - Auth::guard('authsodium')->invalidate()
-         *   // bool
-         *
+         * - Auth::guard('authsodium')->invalidate() // bool
          */
         'name' => null
     ],
-
+    
     /**
     * This should be considered an extra precaution as
     * the login status should disappear when the app
@@ -320,43 +281,43 @@ return [
     * https://laravel.com/docs/8.x/middleware#terminable-middleware
     *
     * If true, and your server supports terminating
-    * middleware, then Auth::invalidate will
-    * be called explicitly after the response has been
-    * sent to the browser. An attempt will also be made
-    * via the `$this->app->terminating` method, however,
-    * for long-running processes this is less useful.
+    * middleware, then Auth::invalidate will be called
+    * explicitly after the response has been sent to the
+    * browser. An attempt will also be made via the
+    * `$this->app->terminating` method, however, for
+    * long-running processes this is less useful.
     */
     'log_out_after_request' => true,
-
+    
     /**
      * Options regarding nonce pruning.
      */
     'prune' => [
-
+        
         /**
-         * Check that the nonce table exists before pruning.
-         * It may not exist in some cases (such as on
-         * terminating the application and before migrations
-         * have been performed). If you're sure the nonces
-         * tables exists, then set to false for a slight
-         * performance optimization.
+         * Check that the nonce table exists before
+         * pruning. It may not exist in some cases (such
+         * as on terminating the application and before
+         * migrations have been performed). If you're
+         * sure the nonces tables exists, then set to
+         * false for a slight performance optimization.
          */
         'check_table_exists' => true,
-
+        
         /**
          * Prune nonces on terminating a request (via
-         * middleware). As per log_out_after_request, this
-         * will only apply if using middleware, and the
-         * server supports it.
+         * middleware). As per log_out_after_request,
+         * this will only apply if using middleware, and
+         * the server supports it.
          */
         'after_request' => true,
-
+        
         /**
          * Prune nonces when the application terminates.
          * This also includes when run via the cli.
          */
         'on_terminate' => false,
-
+        
         /**
          * Specify a time (as a string) to schedule
          * nonces to be pruned at a daily time. The
@@ -378,19 +339,152 @@ return [
          */
         'daily_at' => null
     ],
-
-    'encoding' => 'base64', // or 'hex'
-
     
-    'http_status_codes' => [
+    /**
+     * The encoding used for request signatures, and
+     * also for the user's public key.
+     */
+    'encoding' => 'base64', // or 'hex'
+    
+    'timestamp' => [
+        
+        /**
+         * Whether to use milliseconds (true) or seconds
+         * (false) when dealing with timestamps. This
+         * dicates what the end-user should send, and
+         * also what to expect interally when validating
+         * timestamps, and deleting them.
+         */
+        'milliseconds' => true,
+        
+        /**
+         * The leeway (in seconds, or milliseconds,
+         * depending on the value of
+         * `use_milliseconds`), on either side of the
+         * timestamp, in which to allow valid
+         * timestamps. A leeway of 300000 milliseconds
+         * (the default) equates to a request timestamp
+         * within 5 minutes (before or after) the
+         * current system timestamp being accepted. The
+         * larger the value, the more forgiving the
+         * service, but this will also result in more
+         * nonces being stored at any given time. This,
+         * however, should not be a concern, as nonce
+         * deletion is managed automatically. Please
+         * note that this value should not exceed an
+         * hour.
+         *
+         * 300000 milliseconds = 300 seconds = 5 minutes
+         */ 
+        'leeway' => 300000
+    ],
+    
+    /**
+     * Configure how failed authentication attempts are
+     * managed.
+     */
+    'throttle' => [
+        
+        /**
+         * Whether or not throttling is currently
+         * enabled.
+         */
+        'enabled' => true,
+        
+        /**
+         * Whether to use milliseconds (true) or seconds
+         * (false) when dealing with throttles.
+         */
+        'milliseconds' => true,
+        
+        /**
+         * The invervals (in seconds, or milliseconds,
+         * according to `throttle.milliseconds`) after
+         * which a new authentication attempt can be
+         * made, after having made an initial failed
+         * one. Zero indicates that an attempt can be
+         * made immediately. Intervals are relative to
+         * the preceding one, so the default would allow
+         * three consecutive immediate attempts, then an
+         * attempt in 1 second, then 3 seconds following
+         * that, etc. After the last attempt fails, the
+         * user is considered to be blocked.
+         */
+        'decay' => [0, 0, 0, 1000, 3000],
+        
+        /**
+         * Throttling will not be applied at all for
+         * these environments.
+         */
+        'exclude_environments' => ['local'],
+        
+        /**
+         * If true (the default), will only throttle
+         * automated middleware authentications, not
+         * explicit calls such as
+         * `Auth::authenticateSignature()` or
+         * `Auth::guard('authsodium')->authenticateSignature()`
+         */
+        'middleware_only' => true
+    ],
+    
+    /**
+     * Options for convenience routes. By default, none
+     * are provided.
+     */
+    'routes' => [
 
+        /**
+         * Provide a route name such as 'auth/validate'
+         * which will point to the `validate` method of
+         * `ROTGP\AuthSodium\Http\Controllers\AuthSodiumController`.
+         * The request should be a simple signed GET
+         * request to the route name provided, with no
+         * query or post data. The user is then
+         * authenticated and returned. If the
+         * authentication should fail, then the
+         * appropriate codes will be returned. 
+         */
+        'validate' => null
+    ],
+    
+    /**
+     * Options for enforcing secure HTTPS/TLS
+     * connections.
+     */
+    'secure' => [
+        
+        /**
+         * The environments in which HTTPS/TLS
+         * connections are to be enforced. Requests made
+         * with insecure schemes in these environments
+         * will fail.
+         */
+        'environments' => ['production'],
+        
+        /**
+         * The schemes which are acceptable in secure
+         * environments. This should only ever really be
+         * https, however, other schemes do exist, such
+         * as 'wss' (secure web sockets).
+         */
+        'schemes' => ['https']
+    ],
+    
+    /**
+     * The HTTP status codes to be returned according to
+     * different outcomes. When to use which code is
+     * subjective, so these can be conigured.
+     */
+    'http_status_codes' => [
+        
         /**
          * When all the associated metadata has been
          * provided and validated, but the signature is
          * invalid.
          */
         'unauthorized' => 401,
-
+        
         /**
          * User has been blocked because they have
          * exceeded the allowable amount of failed
@@ -401,7 +495,7 @@ return [
          * receiving a false result).
          */
         'forbidden' => 403,
-
+        
         /**
          * The user and IP address have attempted too
          * many failed authenticated requests, and a
@@ -409,10 +503,12 @@ return [
          * attempting again.
          */
         'too_many_requests' => 429,
-
+        
         /**
          * Some metadata related to the authentication
-         * was incorrect, invalid, or missing. Examples:
+         * was incorrect, invalid, or missing. This is
+         * something that can be fixed by the client.
+         * Examples:
          * - nonce_not_found
          * - nonce_exceeds_max_length
          * - timestamp_not_found
@@ -437,106 +533,31 @@ return [
         'secure_protocol_required' => 426
     ],
 
-    'timestamp' => [
-        
-        /**
-         * Whether to use milliseconds (true) or seconds
-         * (false) when dealing with timestamps. This
-         * dicates what the end-user should send, and
-         * also what to expect interally when validating
-         * timestamps, and deleting them.
-         */
-        'milliseconds' => true,
-
-        /**
-         * The leeway (in seconds, or milliseconds,
-         * depending on the value of
-         * `use_milliseconds`), on either side of the
-         * timestamp, in which to allow valid
-         * timestamps. A leeway of 300000 milliseconds
-         * (the default) equates to a request timestamp
-         * within 5 minutes (before or after) the
-         * current system timestamp being accepted. The
-         * larger the value, the more forgiving the
-         * service, but this will also result in more
-         * nonces being stored at any given time. This,
-         * however, should not be a concern, as nonce
-         * deletion is managed automatically.
-         * 
-         * 300000 milliseconds = 300 seconds = 5 minutes
-         */ 
-        'leeway' => 300000
-    ],
-
     /**
-     * Configure how failed authentication attempts are
-     * managed.
+     * General error codes which may be customized.
+     * These are used in conjunction with HTTP status
+     * codes to provide further information regarding
+     * the error.
      */
-    'throttle' => [
-
-        /**
-         * Whether or not throttling is currently
-         * enabled.
-         */
-        'enabled' => true,
-
-        /**
-         * Whether to use milliseconds (true) or seconds
-         * (false) when dealing with throttles.
-         */
-        'milliseconds' => true,
-
-        /**
-         * The invervals (in seconds, or milliseconds,
-         * according to `throttle.milliseconds`) after
-         * which a new authentication attempt can be
-         * made, after having made an initial failed
-         * one. Zero indicates that an attempt can be
-         * made immediately. Intervals are relative to
-         * the preceding one, so the default would allow
-         * three consecutive immediate attempts, then an
-         * attempt in 1 second, then 3 seconds following
-         * that, etc. After the last attempt (the 8th,
-         * by default) fails, the user is considered to
-         * be blocked.
-         */
-        'decay' => [0, 0, 0, 1000, 3000],
-
-        /**
-         * Throttling will not be applied at all for
-         * these environments.
-         */
-        'exclude_environments' => ['local'],
-
-        /**
-         * If true (the default), will only throttle
-         * automated middleware authentications, not
-         * explicit calls such as
-         * `Auth::authenticateSignature()` or
-         * `Auth::guard('authsodium')->authenticateSignature()`
-         */
-        'middleware_only' => true
-    ],
-
     'error_codes' => [
-
+        
         /**
          * Unable to find the specified Auth-User
          */
         'user_not_found' => null,
-
+        
         /**
          * The specified Auth-User was found, but they
          * are not currently enabled
          */
         'user_not_enabled' => null,
-
+        
         /**
          * No identifier for the auth user was found in
          * the headers
          */
         'user_identifier_not_found' => null,
-
+        
         /**
          * No identifier for the auth user's public key
          * was found in the headers
@@ -560,19 +581,19 @@ return [
          * the request
          */
         'signature_not_found' => null,
-
+        
         /**
          * The timestamp was not found in the headers of the
          * request
          */
         'timestamp_not_found' => null,
-
+        
         /**
          * The timestamp format is invalid - most likely
          * not an integer
          */
         'invalid_timestamp_format' => null,
-
+        
         /**
          * The timestamp provided in the headers falls
          * outside of the acceptable range (defined by `leeway`)
@@ -590,7 +611,7 @@ return [
          * request
          */
         'nonce_not_found' => null,
-
+        
         /**
          * The nonce is too long
          */
@@ -608,24 +629,24 @@ return [
          * before trying again
          */
         'too_many_requests_please_wait' => null,
-
+        
         /**
          * Too many failed requests have been made for a
          * user/ip-address, and no further attempts are
          * forbidden.
          */
         'too_many_requests_forbidden' => null,
-
+        
         /**
          * TLS/SSL secure protocol is not being used 
          */
         'secure_protocol_required' => null,
-
+        
         /**
          * The signature encoding is invalid
          */
         'invalid_signature_encoding' => null,
-
+        
         /**
          * The public key encoding is invalid
          */

@@ -27,9 +27,9 @@ class Throttle extends Model
 
     /**
      * The attributes that are guarded. As this is the
-     * inverse of fillable, we're essentially allowing
-     * any field to be mass assignable. This is safe as
-     * the input will always be system generated.
+     * inverse of fillable, any field will essentially
+     * be mass assignable. This is safe as the input
+     * will always be system generated.
      *
      * @var array
      */
