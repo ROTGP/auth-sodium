@@ -13,10 +13,6 @@ class CreateAuthSodiumTables extends Migration
      */
     public function up()
     {
-        // @TODO if there any any grave problems, then we
-        // should abort
-        authSodium()->validateConfig();
-
         $userModel = authSodium()->authUserModel();
         $userForeignKey = $userModel->getForeignKey();
         $usersTable = $userModel->getTable();

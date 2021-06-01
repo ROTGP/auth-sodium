@@ -8,7 +8,6 @@ use Illuminate\Routing\Router;
 
 use ROTGP\AuthSodium\AuthSodiumDelegate;
 use ROTGP\AuthSodium\Console\PruneNonces;
-use ROTGP\AuthSodium\Console\ValidateConfig;
 use Illuminate\Console\Scheduling\Schedule;
 
 use ROTGP\AuthSodium\Models\Nonce;
@@ -140,8 +139,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
             ], 'config');
 
             $this->commands([
-                PruneNonces::class,
-                ValidateConfig::class
+                PruneNonces::class
             ]);
 
             $pruneDailyAt = config('authsodium.prune.daily_at', false);
