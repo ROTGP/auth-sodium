@@ -125,7 +125,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
         
         if ($this->app->runningInConsole()) {
 
-            $this->loadMigrationsFrom( __DIR__.'/../migrations/3000_01_01_000000_create_auth_sodium_tables.php');
+            $this->loadMigrationsFrom( __DIR__.'/../database/migrations/3000_01_01_000000_create_auth_sodium_tables.php');
             
             /**
              * @NOTE: the following can be published in
@@ -152,7 +152,7 @@ class AuthSodiumServiceProvider extends ServiceProvider
         }
 
         if (config('authsodium.routes.validate')) {
-            $this->loadRoutesFrom(__DIR__.'/Routes/validateRoute.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/validate.php');
         }
 
         $logOutAfterRequest = config('authsodium.log_out_after_request', true);
