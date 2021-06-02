@@ -787,7 +787,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function useGlobalMiddleware()
     {
-        return config('authsodium.middleware.use_global', false);
+        return config('authsodium.middleware.global', false);
     }
     
     /**

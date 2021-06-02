@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/github/license/vhesener/Closures.svg?style=plastic&colorB=68B7EB)]()
 [![Release](https://img.shields.io/github/release/vhesener/Closures.svg?style=plastic&colorB=68B7EB)]() -->
 
-# AuthSodium
+## AuthSodium
 
 `AuthSodium` is a [Laravel](https://laravel.com/)
 package for authenticating API requests with LibSodium's
@@ -89,7 +89,7 @@ Assuming you've performed the above installation, the
 config file can then be found at
 `config/authsodium.php`. 
 
-### Auth User
+### User Model
 The only thing you're REQUIRED to tell `AuthSodium`
 about is the class of your user model. This must extend
 `Illuminate\Database\Eloquent\Model`, and implement
@@ -115,11 +115,28 @@ then you may do so as follows:
 
 `'user.public_key_identifier' => 'pub_key'`
 
+<br />
 
 
-### Protecting routes
+### Protecting routes with middleware
 
+#### Named Middleware
 
+By default, `AuthSodium` provides middleware called
+`'authsodium'`. To protect a route, simply add the
+middleware in the same way you'd normally add middleware
+`Route::resource('foos',
+FooController::class)->middleware('authsodium');` The
+name of the middleware can be customized as follows:
+
+`'middleware.name' => 'custom_middleware_name'`
+
+#### Global Middleware
+
+If you want to protect all incoming requests
+automatically, then set `'middleware.global'` to true:
+
+`'middleware.global' => true`
 
 
 <br /><br /><br /><br /><br />

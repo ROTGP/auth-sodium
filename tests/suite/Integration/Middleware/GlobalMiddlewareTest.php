@@ -10,7 +10,7 @@ class GlobalMiddlewareTest extends IntegrationTestCase
         $this->router()
             ->resource('foos', FooController::class);
 
-        config(['authsodium.middleware.use_global' => true]);
+        config(['authsodium.middleware.global' => true]);
     }
    
     public function test_that_unsigned_request_to_resource_protected_by_global_middleware_fails()

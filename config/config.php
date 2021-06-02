@@ -220,7 +220,7 @@ return [
          * implicitly on all requests. False by default
          * as it's not very flexible.
          */
-        'use_global' => false,
+        'global' => false,
         
         /**
          * If true, requests will be aborted
