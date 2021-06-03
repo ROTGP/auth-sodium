@@ -90,7 +90,7 @@ config file can then be found at
 `config/authsodium.php`. 
 
 ### User Model
-The only thing you're REQUIRED to tell `AuthSodium`
+The only thing you're REQUIRED to tell AuthSodium
 about is the class of your user model. This must extend
 `Illuminate\Database\Eloquent\Model`, and implement
 `Illuminate\Contracts\Auth\Authenticatable`. For
@@ -100,7 +100,7 @@ meets these requirements.
 
 `'user.model' => App\Models\User::class`
 
-`AuthSodium` needs to know how to uniquely identify your
+AuthSodium needs to know how to uniquely identify your
 auth user. By default, this will be with the user's
 `'email'` attribute, but you may choose anything, such
 as username or even an id (assuming the user knows
@@ -108,7 +108,7 @@ their own id).
 
 `'user.unique_identifier' => 'username'`
 
-You should also note that `AuthSodium` will look for the
+You should also note that AuthSodium will look for the
 user's public key using the `'public_key'` attribute of
 the user model. If you wish to call it something else,
 then you may do so as follows:
@@ -122,7 +122,7 @@ then you may do so as follows:
 
 #### Named Middleware
 
-By default, `AuthSodium` provides middleware called
+By default, AuthSodium provides middleware called
 `'authsodium'`. To protect a route, simply add the
 middleware in the same way you'd normally add middleware
 `Route::resource('foos',
@@ -131,12 +131,37 @@ name of the middleware can be customized as follows:
 
 `'middleware.name' => 'custom_middleware_name'`
 
+
 #### Global Middleware
 
 If you want to protect all incoming requests
 automatically, then set `'middleware.global'` to true:
 
 `'middleware.global' => true`
+
+
+#### Middleware groups
+
+If you want to add AuthSodium to a particular middleware
+group (such as 'web', or 'api'), then you may do so as follows:
+
+`'middleware.group' => 'api'`
+
+
+#### Aborting requests
+
+By default, AuthSodium will abort requests with invalid
+signatures automatically, with the appropriate status
+and error codes (which are customizable). There may
+however be situations where you wish to proceed with the
+request, without establishing an authenticated user. To
+achieve this - set the following value to false.
+
+`'middleware.abort_on_invalid_signature' => false`
+
+
+
+
 
 
 <br /><br /><br /><br /><br />
