@@ -1,8 +1,3 @@
-<!-- ![Closures logo](https://raw.githubusercontent.com/vhesener/Closures/assets/assets/logo3.1.png) -->
-
-<!-- [![Language](https://badgen.net/packagist/php/monolog/monolog)]()
-[![License](https://img.shields.io/github/license/vhesener/Closures.svg?style=plastic&colorB=68B7EB)]()
-[![Release](https://img.shields.io/github/release/vhesener/Closures.svg?style=plastic&colorB=68B7EB)]() -->
 
 ## AuthSodium
 
@@ -25,12 +20,6 @@ without an extension. Some objectives of the package:
   * thoroughly tested
   * fast and lightweight
 
-
-## Contents
-  - [Overview](#overview)
-  - [Installation](#installation)
-  - [Configuration](#configuration)
-  - [License](#license)
 
 ## Overview
 
@@ -155,7 +144,7 @@ signatures automatically, with the appropriate status
 and error codes (which are customizable). There may
 however be situations where you wish to proceed with the
 request, without establishing an authenticated user. To
-achieve this - set the following value to false.
+achieve this - set by adjusting the following value:
 
 `'middleware.abort_on_invalid_signature' => false`
 
