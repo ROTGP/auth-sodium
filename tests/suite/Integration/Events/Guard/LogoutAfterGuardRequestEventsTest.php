@@ -13,8 +13,8 @@ class LogoutAfterGuardRequestEventsTest extends IntegrationTestCase
             ->resource('foos', FooController::class);
 
         config([
-            'authsodium.guard.name' => 'authsodium',
-            'authsodium.log_out_after_request' => true,
+            'authsodium.guard' => 'authsodium',
+            'authsodium.invalidate_user.on_terminate' => true,
             'authsodium.middleware.name' => null
         ]);
     }

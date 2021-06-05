@@ -10,7 +10,7 @@ class NamedGuardEventsTest extends IntegrationTestCase
         $this->router()
             ->resource('foos', FooController::class);
         
-        config(['authsodium.guard.name' => 'authsodium']);
+        config(['authsodium.guard' => 'authsodium']);
     }
     
     /**

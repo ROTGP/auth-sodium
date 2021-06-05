@@ -9,7 +9,7 @@ class ValidateRouteTest extends IntegrationTestCase
     {
         config([
             'authsodium.routes.validate' => 'validate',
-            'authsodium.guard.name' => null,
+            'authsodium.guard' => null,
             'authsodium.middleware.name' => null
         ]);
     }

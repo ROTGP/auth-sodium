@@ -11,7 +11,7 @@ class LogoutAfterMiddleRequestTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
 
-        config(['authsodium.log_out_after_request' => true]);
+        config(['authsodium.invalidate_user.on_terminate' => true]);
     }
 
     public function test_that_signed_request_to_resource_protected_by_group_middleware_logs_user_out_afterwards()

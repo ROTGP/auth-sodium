@@ -155,16 +155,16 @@ class AuthSodiumServiceProvider extends ServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/validate.php');
         }
 
-        $logOutAfterRequest = config('authsodium.log_out_after_request', true);
+        $invalidateUserOnTerminate = config('authsodium.invalidate_user.on_terminate', true);
         $pruneOnTerminate = config('authsodium.prune.on_terminate', true);
         
         
-        if (!$logOutAfterRequest && !$pruneOnTerminate) {
+        if (!$invalidateUserOnTerminate && !$pruneOnTerminate) {
             return;
         }
 
-        $this->app->terminating(function () use ($logOutAfterRequest, $pruneOnTerminate) {
-            if ($logOutAfterRequest) {
+        $this->app->terminating(function () use ($invalidateUserOnTerminate, $pruneOnTerminate) {
+            if ($invalidateUserOnTerminate) {
                 authSodium()->invalidate();
             }
 

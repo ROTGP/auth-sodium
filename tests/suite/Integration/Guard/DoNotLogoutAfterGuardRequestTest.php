@@ -13,8 +13,8 @@ class DoNotLogoutAfterGuardRequestTest extends IntegrationTestCase
             ->resource('foos', FooController::class);
 
         config([
-            'authsodium.guard.name' => 'authsodium',
-            'authsodium.log_out_after_request' => false,
+            'authsodium.guard' => 'authsodium',
+            'authsodium.invalidate_user.on_terminate' => false,
             'authsodium.middleware.name' => null
         ]);
     }

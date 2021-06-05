@@ -288,7 +288,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function terminate($request, $response)
     {
-        if (config('authsodium.log_out_after_request', true)) {
+        if (config('authsodium.invalidate_user.after_request', true)) {
             $this->invalidate();
         }
 
@@ -726,7 +726,7 @@ class AuthSodiumDelegate implements Guard
      */
     public function guardName()
     {
-        return config('authsodium.guard.name', null);
+        return config('authsodium.guard', null);
     }
 
     /**
