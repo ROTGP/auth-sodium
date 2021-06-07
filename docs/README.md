@@ -92,7 +92,7 @@ convenience, the model may simply extend
 `ROTGP\AuthSodium\Models\AuthSodiumUser` which already
 meets these requirements.
 
-```json
+```config
 'user.model' => App\Models\User::class
 ```
 
@@ -102,7 +102,7 @@ auth user. By default, this will be with the user's
 as username or even an id (assuming the user knows
 their own id). 
 
-```json
+```config
 'user.unique_identifier' => 'username'
 ```
 
@@ -111,7 +111,7 @@ user's public key using the `'public_key'` attribute of
 the user model. If you wish to call it something else,
 then you may do so as follows:
 
-```json
+```config
 'user.public_key_identifier' => 'pub_key'
 ```
 
@@ -129,7 +129,7 @@ extend this class and override any functionality you
 like. Simply update the config value to point to your
 custom class as follows:
 
-```json
+```config
 'delegate' => 'My\Custom\AuthDelegate::class'
 ```
 <br />
@@ -146,7 +146,7 @@ middleware in the same way you'd normally add middleware
 FooController::class)->middleware('authsodium');` The
 name of the middleware can be customized as follows:
 
-```json
+```config
 'middleware.name' => 'custom_middleware_name'
 ```
 <br />
@@ -155,7 +155,7 @@ name of the middleware can be customized as follows:
 If you want to protect all incoming requests
 automatically, then set `'middleware.global'` to true:
 
-```json
+```config
 'middleware.global' => true
 ```
 <br />
@@ -164,7 +164,7 @@ automatically, then set `'middleware.global'` to true:
 If you want to add AuthSodium to a particular middleware
 group (such as 'web', or 'api'), then you may do so as follows:
 
-```json
+```config
 'middleware.group' => 'api'
 ```
 <br />
@@ -182,7 +182,29 @@ achieve this - adjust the following value:
 'middleware.abort_on_invalid_signature' => false
 ```
 <br />
+<br />
 
+
+
+### Timestamps
+
+A timestamp should be sent by the client (as a header)
+with each authenticated request. 
+
+#### Leeway
+
+By default, AuthSodium provides middleware called
+`'authsodium'`. To protect a route, simply add the
+middleware in the same way you'd normally add middleware
+`Route::resource('foos',
+FooController::class)->middleware('authsodium');` The
+name of the middleware can be customized as follows:
+
+```config
+'middleware.name' => 'custom_middleware_name'
+```
+<br />
+<br />
 
 
 <br /><br /><br /><br /><br />
