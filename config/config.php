@@ -75,9 +75,9 @@ return [
         
         /**
          * The timestamp of when the request is being
-         * made. Either in seconds or milliseconds,
-         * according to the config value of
-         * `timestamp.milliseconds`
+         * made. This is the number of milliseconds (or
+         * seconds if you're using a 32-bit version of
+         * PHP), since midnight January 1st 1970 (UTC)
          */
         'timestamp' => 'Auth-Timestamp',
         
@@ -289,38 +289,24 @@ return [
      */
     'encoding' => 'base64', // or 'hex'
     
-    'timestamp' => [
-        
-        /**
-         * Whether to use milliseconds (true) or seconds
-         * (false) when dealing with timestamps. This
-         * dicates what the end-user should send, and
-         * also what to expect interally when validating
-         * timestamps, and deleting them.
-         */
-        'milliseconds' => true,
-        
-        /**
-         * The leeway (in seconds, or milliseconds,
-         * depending on the value of
-         * `use_milliseconds`), on either side of the
-         * timestamp, in which to allow valid
-         * timestamps. A leeway of 300000 milliseconds
-         * (the default) equates to a request timestamp
-         * within 5 minutes (before or after) the
-         * current system timestamp being accepted. The
-         * larger the value, the more forgiving the
-         * service, but this will also result in more
-         * nonces being stored at any given time. This,
-         * however, should not be a concern, as nonce
-         * deletion is managed automatically. Please
-         * note that this value should not exceed an
-         * hour.
-         *
-         * 300000 milliseconds = 300 seconds = 5 minutes
-         */ 
-        'leeway' => 300000
-    ],
+    /**
+     * The leeway (in milliseconds, unless you're using
+     * a 32-bit version of PHP, in which case it is in
+     * seconds), on either side of the timestamp, in
+     * which to allow valid timestamps. A leeway of
+     * 300000 milliseconds (the default) equates to a
+     * request timestamp within 5 minutes (before or
+     * after) the current system timestamp being
+     * accepted. The larger the value, the more
+     * forgiving the service, but this will also result
+     * in more nonces being stored at any given time.
+     * This, however, should not be a concern, as nonce
+     * deletion is managed automatically. Please note
+     * that this value should not exceed an hour.
+     *
+     * 300000 milliseconds = 300 seconds = 5 minutes
+     */ 
+    'leeway' => 300000,
     
     /**
      * Configure how failed authentication attempts are
@@ -335,19 +321,14 @@ return [
         'enabled' => true,
         
         /**
-         * Whether to use milliseconds (true) or seconds
-         * (false) when dealing with throttles.
-         */
-        'milliseconds' => true,
-        
-        /**
-         * The invervals (in seconds, or milliseconds,
-         * according to `throttle.milliseconds`) after
-         * which a new authentication attempt can be
-         * made, after having made an initial failed
-         * one. Zero indicates that an attempt can be
-         * made immediately. Intervals are relative to
-         * the preceding one, so the default would allow
+         * The invervals (in milliseconds, unless you're
+         * using a 32-bit version of PHP, in which case
+         * it is in seconds) after which a new
+         * authentication attempt can be made, after
+         * having made an initial failed one. Zero
+         * indicates that an attempt can be made
+         * immediately. Intervals are relative to the
+         * preceding one, so the default would allow
          * three consecutive immediate attempts, then an
          * attempt in 1 second, then 3 seconds following
          * that, etc. After the last attempt fails, the
@@ -450,11 +431,11 @@ return [
              * timestamp. A request with a repeating
              * user/nonce/timestamp will still be
              * rejected if the timestamp does not fall
-             * within `timestamp.leeway` of the system
+             * within `leeway` of the system
              * time. This allows for more margin or
              * error (random nonces being repeated), as
              * the nonces must only be unique within
-             * `timestamp.leeway` of the system time.
+             * `leeway` of the system time.
              *
              * If false (the default), then the unique
              * constraint will be for the user/nonce,

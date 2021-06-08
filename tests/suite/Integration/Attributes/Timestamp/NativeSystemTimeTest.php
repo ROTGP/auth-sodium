@@ -10,13 +10,13 @@ use Carbon\Carbon;
  * method so that it returns `Carbon::now()` - which in
  * turn returns the result of `Carbon::setTestNow`
  *
- * In this test - $shouldMock is false, so the real
+ * In this test - $shouldMockTime is false, so the real
  * getSystemTime method will be called and will return
  * the real system time of when the test is run.
  */
 class NativeSystemTimeTest extends IntegrationTestCase
 {
-    protected $shouldMock = false;
+    protected $shouldMockTime = false;
 
     protected function customizeSetup()
     {

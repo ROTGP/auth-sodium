@@ -10,28 +10,28 @@ use Carbon\Carbon;
  * that it returns `Carbon::now()` - which in turn
  * returns the result of `Carbon::setTestNow`
  *
- * In this test - $shouldMock is false, so the real
+ * In this test - $shouldMockTime is false, so the real
  * getSystemTime method will be called and will return
  * the real system time of when the test is run.
  */
 class NativeSystemTimeSecondsTest extends IntegrationTestCase
 {
-    protected $shouldMock = false;
+    protected $shouldMockTime = false;
+    protected $shouldMock64Bit = true;
+    protected $is64Bit = false;
 
     protected function customizeSetup()
     {
         $this->router()
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
-
-        config([
-            'authsodium.timestamp.milliseconds' => false,
-            'authsodium.timestamp.leeway' => 300,
-        ]);
+        
+        config(['authsodium.leeway' => 300]);
     }
-
+    
     public function test_that_signed_request_with_st_patricks_day_timestamp_in_seconds_fails()
     {
+        $this->is64Bit = false;
         $request = $this->signed()->request();
         $response = $request->response();
         $this->setTimestampFromDate($this->epoch);

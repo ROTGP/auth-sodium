@@ -13,7 +13,7 @@ class TimestampCustomLeewayTest extends IntegrationTestCase
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
         
-         config(['authsodium.timestamp.leeway' => 10]);
+         config(['authsodium.leeway' => 10]);
     }
 
     public function test_that_signed_request_with_timestamp_before_custom_leeway_fails()

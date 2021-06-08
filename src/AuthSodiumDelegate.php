@@ -309,7 +309,7 @@ class AuthSodiumDelegate implements Guard
             return;
         }
         $leeway = $this->getTimestampLeeway();
-        $cutoff = $this->getSystemTime($this->useTimestampMilliseconds()) - $leeway;
+        $cutoff = $this->getSystemTime() - $leeway;
         return Nonce::where('timestamp', '<', $cutoff)->delete();
     }
 
@@ -399,7 +399,7 @@ class AuthSodiumDelegate implements Guard
      */
     protected function getTimestampLeeway()
     {
-        return config('authsodium.timestamp.leeway', 300000);
+        return config('authsodium.leeway', 300000);
     }
 
     /**
@@ -413,23 +413,14 @@ class AuthSodiumDelegate implements Guard
     }
 
     /**
-     * Get whether to use milliseconds for timestamps. 
+     * Get whether your PHP version is 64 bit (false
+     * means 32 bit).
      * 
      * @return bool
      */
-    protected function useTimestampMilliseconds()
+    protected function is64Bit()
     {
-        return config('authsodium.timestamp.milliseconds', true);
-    }
-
-    /**
-     * Get whether to use milliseconds for throttles. 
-     * 
-     * @return bool
-     */
-    protected function useThrottleMilliseconds()
-    {
-        return config('authsodium.throttle.milliseconds', true);
+        return PHP_INT_SIZE === 8;
     }
 
     /**
@@ -471,9 +462,9 @@ class AuthSodiumDelegate implements Guard
      * @param  bool  $useMilliseconds
      * @return int
      */
-    public function getSystemTime($useMilliseconds)
+    protected function getSystemTime()
     {
-        return $useMilliseconds ? intval(microtime(true) * 1000) : time();
+        return $this->is64Bit() ? intval(microtime(true) * 1000) : time();
     }
     
     /**
@@ -585,7 +576,7 @@ class AuthSodiumDelegate implements Guard
 
         $value = intval($value);
         $leeway = $this->getTimestampLeeway();
-        $now = $this->getSystemTime($this->useTimestampMilliseconds());
+        $now = $this->getSystemTime();
         $difference = abs($now - $value);
         
         if ($difference > $leeway) {
@@ -1312,7 +1303,7 @@ class AuthSodiumDelegate implements Guard
         
         if ($shouldThrottle) {
             $ipAddress = $this->getIpAddress($request);
-            $now = $this->getSystemTime($this->useThrottleMilliseconds());
+            $now = $this->getSystemTime();
             $decayValues = $this->getThrottleDecay();
             $throttle = Throttle::forUserIdentifier($authUserIdentifier)
                 ->where('ip_address', $ipAddress)
@@ -1342,7 +1333,7 @@ class AuthSodiumDelegate implements Guard
                     'user_id' => $authUserIdentifier,
                     'ip_address' => $ipAddress,
                     'attempts' => 0,
-                    'try_again' => $this->getSystemTime($this->useThrottleMilliseconds()),
+                    'try_again' => $this->getSystemTime(),
                     'blocked' => false
                 ]), $decayValues);
             }

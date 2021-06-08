@@ -43,10 +43,12 @@ abstract class IntegrationTestCase extends TestCase
 
     protected $mock;
 
-    protected $shouldMock = true;
+    protected $shouldMockTime = true;
+    protected $shouldMock64Bit = false;
 
     protected $ipAddress = 1;
     protected $scheme = 'http';
+    protected $is64Bit = true;
 
     /**
      * Setup the test environment.
@@ -69,11 +71,15 @@ abstract class IntegrationTestCase extends TestCase
         });
         $this->assertUserLoggedOut();
 
-        if (!$this->shouldMock) {
-            return;
-        }
         $this->resetMock();
-        $this->mockTime();
+
+        if ($this->shouldMockTime) {
+            $this->mockTime();
+        }
+
+        if ($this->shouldMock64Bit) {
+            $this->mock64Bit();
+        }
         
         Event::listen('eloquent.*', Closure::fromCallable([$this, 'onModelEvent']));
     }
@@ -97,11 +103,20 @@ abstract class IntegrationTestCase extends TestCase
 
     protected function mockTime()
     {
-        $getSystemTime = function($useMilliseconds) {
-            return $useMilliseconds ? intval(Carbon::now()->getPreciseTimestamp(3)) : Carbon::now()->getTimestamp();
+        $getSystemTime = function() {
+            return $this->is64Bit ? intval(Carbon::now()->getPreciseTimestamp(3)) : Carbon::now()->getTimestamp();
         };
         
         $this->mock->shouldReceive('getSystemTime')->andReturnUsing($getSystemTime);
+    }
+
+    protected function mock64Bit()
+    {
+        $is64Bit = function() {
+            return $this->is64Bit;
+        };
+        
+        $this->mock->shouldReceive('is64Bit')->andReturnUsing($is64Bit);
     }
 
     protected function setTime()
@@ -116,7 +131,7 @@ abstract class IntegrationTestCase extends TestCase
 
     protected function setTimestampToNow($offset = 0)
     {
-        $timestamp = config('authsodium.timestamp.milliseconds', true) ?
+        $timestamp = $this->is64Bit ?
             intval(microtime(true) * 1000) : time();
         $this->timestamp($timestamp + $offset);
     }
@@ -140,7 +155,7 @@ abstract class IntegrationTestCase extends TestCase
 
     protected function setTimestampFromDate($value)
     {
-        if (config('authsodium.timestamp.milliseconds', true)) {
+        if ($this->is64Bit) {
             $this->timestamp(intval($value->getPreciseTimestamp(3)));
         }  else {
             $this->timestamp($value->getTimestamp());
@@ -242,8 +257,9 @@ abstract class IntegrationTestCase extends TestCase
         )
     {
         if (!$timestamp) {
-            $timestamp = intval($this->epoch->getPreciseTimestamp(3));
+            $timestamp = $this->is64Bit ? intval($this->epoch->getPreciseTimestamp(3)) : $this->epoch->getTimestamp();
         }
+        
         return $this->method($method)
             ->url($url)
             ->queryData($queryData)

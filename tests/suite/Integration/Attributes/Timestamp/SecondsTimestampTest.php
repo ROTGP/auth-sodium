@@ -7,33 +7,33 @@ use Carbon\Carbon;
 
 class SecondsTimestampTest extends IntegrationTestCase
 {
+    protected $shouldMock64Bit = true;
+    protected $is64Bit = false;
+    
     protected function customizeSetup()
     {
         $this->router()
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
 
-        config([
-            'authsodium.timestamp.milliseconds' => false,
-            'authsodium.timestamp.leeway' => 300,
-        ]);
-    }
-
-    public function test_that_signed_request_in_seconds_with_timestamp_in_milliseconds_fails()
-    {
-        $request = $this->signed()->request();
-        $response = $request->response();
-        $this->assertValidationError($response, 'invalid_timestamp_range');
-        $this->assertEquals(1616007320000, $this->getTimestamp());
+        config(['authsodium.leeway' => 300]);
     }
 
     public function test_that_signed_request_in_seconds_with_timestamp_in_seconds_succeeds()
     {
         $request = $this->signed()->request();
         $response = $request->response();
-        $this->timestamp($this->epoch->timestamp);
-        $this->assertValidationError($response, 'invalid_timestamp_range');
+        $this->assertSuccessfulRequest($response);
         $this->assertEquals(1616007320, $this->getTimestamp());
+    }
+
+    public function test_that_signed_request_in_seconds_with_timestamp_in_milliseconds_fails()
+    {
+        $request = $this->signed()->request();
+        $this->timestamp(intval($this->epoch->getPreciseTimestamp(3)));
+        $response = $request->response();
+        $this->assertValidationError($response, 'invalid_timestamp_range');
+        $this->assertEquals(1616007320000, $this->getTimestamp());
     }
 
     public function test_that_signed_request_in_seconds_with_timestamp_equal_to_negative_leeway_succeeds()

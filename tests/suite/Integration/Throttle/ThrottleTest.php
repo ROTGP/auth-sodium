@@ -8,16 +8,16 @@ use Carbon\Carbon;
 
 class ThrottleTest extends IntegrationTestCase
 {
+    protected $shouldMock64Bit = true;
+    protected $is64Bit = false;
+
     protected function customizeSetup()
     {
         $this->router()
             ->resource('foos', FooController::class)
             ->middleware('authsodium');
 
-        config([
-            'authsodium.throttle.milliseconds' => false,
-            'authsodium.throttle.decay' => [0, 0, 0, 1, 3]
-        ]);
+        config(['authsodium.throttle.decay' => [0, 0, 0, 1, 3]]);
     }
 
     public function test_that_requests_from_user_are_throttled_and_eventually_blocked()
@@ -30,7 +30,6 @@ class ThrottleTest extends IntegrationTestCase
         $response = $this->signed()->request()->withUser($userId)->nonce(1)->response();
         $this->assertSuccessfulRequest($response);
         $this->assertNull(Throttle::first());
-        
         
         /**
          * Bad signature - no throttle will exist, and
@@ -45,7 +44,6 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals(Throttle::first()->attempts, 0);
         $this->assertEquals(Throttle::first()->try_again, 1616007320);
         $this->assertEquals(Throttle::first()->try_again, $this->epoch->getTimestamp());
-        
         
         /**
          * Consume the first attempt. The value
@@ -155,7 +153,6 @@ class ThrottleTest extends IntegrationTestCase
         $this->assertEquals(Throttle::first()->attempts, 4);
         $this->assertEquals(Throttle::first()->try_again, 1616007324);
         
-
         /**
          * Advance five seconds (from epoch) such that
          * system/request time (1616007325) is one
