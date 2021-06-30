@@ -27,6 +27,10 @@ class AuthSodiumServiceProvider extends ServiceProvider
      */
     public function boot(Router $router, Kernel $kernel)
     {
+        if (!defined('SODIUM_LIBRARY_VERSION')) {
+            throw new Exception("Sodium is not available");
+        }
+
         $delegateNamespace = config('authsodium.delegate', AuthSodiumDelegate::class);
         
         $this->app->instance($delegateNamespace, authSodium());

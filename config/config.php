@@ -238,16 +238,6 @@ return [
     'prune' => [
         
         /**
-         * Check that the nonce table exists before
-         * pruning. It may not exist in some cases (such
-         * as on terminating the application and before
-         * migrations have been performed). If you're
-         * sure the nonces tables exists, then set to
-         * false for a slight performance optimization.
-         */
-        'check_table_exists' => true,
-        
-        /**
          * Prune nonces on terminating a request (via
          * middleware). As per invalidate_user.on_terminate,
          * this will only apply if using middleware, and
@@ -280,7 +270,17 @@ return [
          * by providing the `authsodium:prune` command
          * as the argument.
          */
-        'daily_at' => null
+        'daily_at' => null,
+
+        /**
+         * Check that the nonce table exists before
+         * pruning. It may not exist in some cases (such
+         * as on terminating the application and before
+         * migrations have been performed). If you're
+         * sure the nonces tables exists, then set to
+         * false for a slight performance optimization.
+         */
+        'check_table_exists' => true
     ],
     
     /**
@@ -391,7 +391,7 @@ return [
          * environments. This should only ever really be
          * https, however, other schemes do exist, such
          * as 'wss' (secure web sockets).
-         */
+         */ 
         'schemes' => ['https']
     ],
 
@@ -408,15 +408,15 @@ return [
         'nonce' => [
             
             /**
-             * The length of the nonce for the database
-             * column. By default it's 44, which is 32
-             * base64 encoded bytes. For hex encoding,
-             * the length should be 64. Not that this is
-             * just a plain string (or int). It is
-             * convenient to generate random bytes with
-             * a CSPRNG and encode them as hex or
-             * base64, but in the end it's just a
-             * string.
+             * The length of the database column for
+             * nonce. By default it's 44, which is 32
+             * base64-encoded bytes. For hex encoded
+             * nonces, the length should be 64. Note
+             * that this is just a plain string (or
+             * integer as a string). It is convenient to
+             * generate random bytes with a CSPRNG and
+             * encode them as hex or base64, but in the
+             * end it's just a string.
              */
             'length' => 44,
             
