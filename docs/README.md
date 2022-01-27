@@ -9,14 +9,14 @@ Sodium is available natively in PHP since version 7.2
 without an extension. Some objectives of the package:
   * use modern security standards
   * provide stateless RESTful API asymmetric authentication
-  * remove complexity of clients having to request/renew tokens
-  * remove the need of sending sensitive credentials (such as
+  * remove complexity of clients having to request/manage/renew tokens
+  * remove the need for sending sensitive credentials (such as
     passwords) to the server
   * offload memory/cpu intensive work (such as [slow
     password hashing](https://en.wikipedia.org/wiki/Key_derivation_function#Password_hashing)) from the server to the client
   * manage
     [nonces](https://en.wikipedia.org/wiki/Cryptographic_nonce)
-    transparently
+    transparently and automatically
   * throttle and block malicious users
   * highly customizable
   * non-invasive
@@ -26,9 +26,30 @@ without an extension. Some objectives of the package:
   * support Laravel 7+
 
 
+## The traditional authentication model 
+
+The traditional model is for the client to send the
+user's password to 'log in', which is then hashed on the
+server (which is computationally expensive) and compared
+with a previously-saved hash. If they match, then a
+token (with an expiration date) is stored on the server
+and issued to the client. For future requests, the
+client provides the token. The issue with this is that
+the client must then store the token, send it with
+each request, renew it if it has expired, or request a
+new one if it is rejected. Furthermore, tokens are
+susceptible to misuse if they fall into the hands of an
+attacker, as they may be used to authenticate any
+number of requests.
+
+
 ## What is a stateless API? 
 
-Put simply, each request must contain all of the information necessary to be understood by the server, rather than be dependent on the server remembering prior requests.
+Put simply, each request must contain all of the
+information necessary to be understood by the server,
+and to authenticate the user making the request, rather
+than being dependent on the server 'remembering'
+previously successful authentications from the user. 
 
 
 ## How LibSodium works
@@ -63,10 +84,10 @@ workflow for user registration:
    request with the user's private key, to ensure that
    the public key is valid
 
-The request must contain headers
-with the following metadata: 
+Each request must contain headers with the following
+metadata: 
  - a unique identifier for the
-user to be authenticated (like an email address)
+user to be authenticated (for example: an email address)
  - a
    [nonce](https://en.wikipedia.org/wiki/Cryptographic_nonce)
  - a timestamp
@@ -279,7 +300,7 @@ however be situations where you wish to proceed with the
 request, without establishing an authenticated user. To
 achieve this - adjust the following value:
 
-```json
+```config
 'middleware.abort_on_invalid_signature' => false
 ```
 <br />
@@ -289,15 +310,25 @@ achieve this - adjust the following value:
 
 ## Leeway
 
-By default, AuthSodium provides middleware called
-`'authsodium'`. To protect a route, simply add the
-middleware in the same way you'd normally add middleware
-`Route::resource('foos',
-FooController::class)->middleware('authsodium');` The
-name of the middleware can be customized as follows:
+The `leeway` (in milliseconds, unless you're using a
+32-bit version of PHP, in which case it is in seconds),
+on either side of the timestamp, in which to allow valid
+requests. A leeway of 300000 milliseconds (the
+default) equates to a request timestamp within 5 minutes
+(before or after) the current system timestamp being
+accepted. The larger the value, the more forgiving the
+service, but this will also result in more nonces being
+stored at any given time. This, however, should not be a
+concern, as nonce deletion is managed automatically.
+
+The value may be defined as desired, however please note
+that for security reasons - it is not recommended to use
+a value that exceeds one hour. 
+
+300000 milliseconds = 300 seconds = 5 minutes
 
 ```config
-'middleware.name' => 'custom_middleware_name'
+'leeway' => 300000
 ```
 <br />
 <br />
@@ -306,24 +337,115 @@ name of the middleware can be customized as follows:
 ## Nonce pruning
 
 For security reasons, AuthSodium must keep a record (in
-the database) of all the nonces used for a particular user
-(and possibly also timestamp, according to
+the database) of all the nonces used for a particular
+user (and possibly also timestamp, according to
 `authsodium.schema.nonce.unique_per_timestamp`), where
 the nonce is not older than the value of
 `authsodium.leeway`. Nonces that are older than this
-value can be safely (and automatically)
-deleted on a periodic basis.
+value can be safely (and automatically) deleted on a
+periodic basis. Below are a few of the options
+available, please check the config file for more.
 
 
 
-#### After each request
-
-Bar
+#### Prune nonces after each request
 
 ```config
-'foo' => 'bar'
+'after_request' => true
 ```
+
+#### Prune nonces on terminating (a long-running) application
+
+```config
+'on_terminate' => false
+```
+
+#### Prune nonces daily at a specified time
+
+```config
+'daily_at' => '23.45'
+```
+<br >
+
+## Request throttling
+Failed authenticated requests may be throttled to limit
+malicious behaviour. If a request's signature is invalid
+(or missing), and throttling is enabled, then the client
+must wait for a config-defined number of seconds before
+attempting another request.
+
+#### Enable throttling
+
+```config
+'throttle.enabled' => true
+```
+
+#### Define decay
+
+The invervals (in milliseconds, unless you're using a
+32-bit version of PHP, in which case it is in seconds)
+after which a new authentication attempt can be made,
+after having made an initial failed one. Zero indicates
+that an attempt can be made immediately. Intervals are
+relative to the preceding one, so the default would
+allow three consecutive immediate attempts, then an
+attempt in 1 second, then 3 seconds following that, etc.
+After the last attempt fails, the user is considered to
+be blocked.
+
+```config
+'throttle.decay' => [0, 0, 0, 1000, 3000]
+```
+
 <br />
+
+## User validation
+Provide a route name such as 'auth/validate' which will
+point to the `validate` method of
+`ROTGP\AuthSodium\Http\Controllers\AuthSodiumController`.
+The request should be a simple signed GET request to the
+route name provided, with no query or post data. The
+user is then authenticated and returned. If the
+authentication should fail, then the appropriate codes
+will be returned. 
+
+```config
+'routes.validate' => 'auth/validate'
+```
+
+
+
+<br />
+
+## Force TLS
+Options for enforcing secure HTTPS/TLS connections.
+While it's ideal to ensure this with a web-server
+configuration (such as Nginx) - sometimes that is not
+possible. 
+
+#### Environments to secure
+
+```config
+'secure.environments' => 'auth/validate'
+```
+
+#### Environments to secure
+
+```config
+'secure.environments' => ['production']
+```
+
+#### Valid schemes
+
+The schemes which are acceptable in secure environments.
+This should only ever really be https, however, other
+schemes do exist, such as 'wss' (secure web sockets).
+
+```config
+'secure.schemes' => ['https']
+```
+
+
 <br />
 
 

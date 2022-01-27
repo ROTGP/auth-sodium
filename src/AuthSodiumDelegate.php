@@ -397,7 +397,7 @@ class AuthSodiumDelegate implements Guard
      * 
      * @return int
      */
-    protected function getTimestampLeeway()
+    public function getTimestampLeeway()
     {
         return config('authsodium.leeway', 300000);
     }
@@ -462,7 +462,7 @@ class AuthSodiumDelegate implements Guard
      * @param  bool  $useMilliseconds
      * @return int
      */
-    protected function getSystemTime()
+    public function getSystemTime()
     {
         return $this->is64Bit() ? intval(microtime(true) * 1000) : time();
     }
@@ -548,7 +548,7 @@ class AuthSodiumDelegate implements Guard
      * @param  mixed $value
      * @return bool
      */
-    protected function isValidInt($value)
+    public function isValidInt($value)
     {
         $value = strval($value);
         return ctype_digit($value) &&
@@ -832,7 +832,7 @@ class AuthSodiumDelegate implements Guard
      *
      * @return string
      */
-    protected function userUniqueIdentifier()
+    public function userUniqueIdentifier()
     {
         return config(
             'authsodium.user.unique_identifier',
@@ -845,7 +845,7 @@ class AuthSodiumDelegate implements Guard
      *
      * @return string
      */
-    protected function userPublicKeyIdentifier()
+    public function userPublicKeyIdentifier()
     {
         return config(
             'authsodium.user.public_key_identifier',
